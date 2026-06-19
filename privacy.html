@@ -1,0 +1,265 @@
+<!DOCTYPE html><html lang="en"><head>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RISE Furnished Stays — Accessibility</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&amp;family=Kalam:wght@300;400;700&amp;family=Libre+Baskerville:wght@400;700&amp;family=Work+Sans:wght@300;400;500;600;700&amp;family=Spectral:wght@300;400;600;700&amp;family=Bebas+Neue&amp;display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-head: 'Libre Baskerville', Georgia, serif;
+    --font-body: 'Work Sans', system-ui, sans-serif;
+    --ink: #2b2926;
+    --ink-soft: #6f6a63;
+    --paper: #f4f1ea;
+    --paper-2: #ece7dc;
+    --line: #2b2926;
+    --accent: oklch(0.64 0.13 45);
+    --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+    --radius-sketch: 255px 12px 225px 14px / 14px 225px 14px 255px;
+    --radius-sketch-2: 14px 225px 14px 255px / 255px 12px 225px 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-weight: 400; font-size: 17px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column;
+  }
+  h1, h2, h3 { font-family: var(--font-head); font-weight: 700; line-height: 1.05; margin: 0; }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background-image:
+      linear-gradient(color-mix(in oklab, var(--ink) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--ink) 4%, transparent) 1px, transparent 1px);
+    background-size: 28px 28px; pointer-events: none; z-index: 0;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 0 28px; width: 100%; }
+  .box { border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: var(--paper); }
+  .box.alt { border-radius: var(--radius-sketch-2); }
+  .btn {
+    font-family: var(--font-body); font-weight: 700; font-size: 16px;
+    border: 2.5px solid var(--line); border-radius: var(--radius-sketch);
+    background: var(--paper); color: var(--ink); padding: 11px 20px; cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink); transition: transform .08s, box-shadow .08s;
+  }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn.accent { background: var(--accent); color: #fff; }
+  .btn.ghost { box-shadow: none; }
+  .note {
+    font-family: var(--font-body); font-style: italic; color: var(--accent);
+    font-size: 14.5px; line-height: 1.35; display: flex; gap: 6px; align-items: flex-start;
+  }
+  .note::before { content: "↳"; font-style: normal; font-weight: 700; }
+  .eyebrow {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    text-transform: uppercase; letter-spacing: .18em; font-size: 12px; color: var(--ink-soft);
+  }
+  /* NAV */
+  header.nav {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in oklab, var(--paper) 88%, transparent);
+    backdrop-filter: blur(4px); border-bottom: 2.5px solid var(--line);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .logo { display: flex; align-items: center; gap: 12px; cursor: pointer; text-decoration: none; }
+  .logo-img { height: 60px; width: auto; display: block; }
+  nav.links { display: flex; align-items: center; gap: 0; }
+  nav.links > * { position: relative; }
+  nav.links > *:not(:first-child) { margin-left: 16px; }
+  nav.links > *:not(:first-child)::before { content: "|"; position: absolute; left: -9px; top: 50%; transform: translateY(-50%); color: color-mix(in oklab, var(--ink) 26%, transparent); font-weight: 300; pointer-events: none; }
+  nav.links a {
+    font-family: var(--font-body); font-weight: 400; font-size: 16px; color: var(--ink);
+    text-decoration: none; padding: 8px 13px; border-radius: 8px; border: 2px solid transparent;
+  }
+  nav.links a:hover { border-color: var(--line); background: var(--accent-soft); }
+  nav.links a.current { border-color: var(--line); background: var(--accent); color: #fff; }
+  .nav-cta { display: flex; align-items: center; gap: 14px; }
+  .burger { display: none; }
+  .nav-dd { position: relative; }
+  .nav-dd > a::after { content: " ▾"; font-size: 16px; }
+  .nav-dd-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 252px; background: var(--paper); border: 2.5px solid var(--line); border-radius: 12px; box-shadow: 4px 5px 0 var(--ink); padding: 7px; display: none; flex-direction: column; gap: 2px; z-index: 60; }
+  .nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu { display: flex; }
+  .nav-dd-menu a { padding: 9px 12px; border-radius: 8px; border: 2px solid transparent; font-size: 14.5px; white-space: nowrap; color: var(--ink); text-decoration: none; }
+  .nav-dd-menu a:hover { border-color: var(--line); background: var(--accent-soft); }
+  /* LEGAL */
+  .legal-section { flex: 1 0 auto; padding: 56px 0 70px; position: relative; z-index: 1; }
+  .breadcrumb { font-family: ui-monospace, monospace; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 22px; }
+  .breadcrumb a { color: var(--ink-soft); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--accent); }
+  .legal-head { max-width: 720px; margin-bottom: 14px; }
+  .legal-head h1 { font-size: clamp(38px, 5vw, 56px); line-height: 1.02; margin-bottom: 14px; }
+  .legal-head h1 .u { color: var(--accent); }
+  .legal-head p.lede { font-size: 18px; color: var(--ink-soft); line-height: 1.55; max-width: 56ch; margin: 0; }
+  .legal-updated { font-family: ui-monospace, monospace; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-top: 18px; display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--line); border-radius: 30px; padding: 5px 14px; box-shadow: 2px 2px 0 var(--ink); background: var(--paper); }
+  .legal-grid { display: grid; grid-template-columns: 230px 1fr; gap: 46px; align-items: start; margin-top: 40px; }
+  /* TOC */
+  .legal-toc { position: sticky; top: 92px; }
+  .legal-toc .toc-label { font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 12px; }
+  .legal-toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; display: flex; flex-direction: column; gap: 2px; }
+  .legal-toc a { counter-increment: toc; display: flex; gap: 10px; align-items: baseline; text-decoration: none; color: var(--ink-soft); font-size: 14.5px; padding: 7px 10px; border-radius: 8px; border: 2px solid transparent; line-height: 1.3; }
+  .legal-toc a::before { content: counter(toc, decimal-leading-zero); font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); }
+  .legal-toc a:hover { border-color: var(--line); background: var(--accent-soft); color: var(--ink); }
+  /* body */
+  .legal-body { max-width: 720px; }
+  .legal-body section { padding-bottom: 34px; margin-bottom: 34px; border-bottom: 2px dashed color-mix(in oklab, var(--ink) 18%, transparent); scroll-margin-top: 92px; }
+  .legal-body section:last-of-type { border-bottom: none; }
+  .legal-body h2 { font-size: 25px; margin-bottom: 14px; display: flex; align-items: baseline; gap: 12px; }
+  .legal-body h2 .hn { font-family: ui-monospace, monospace; font-size: 14px; color: var(--accent); font-weight: 400; }
+  .legal-body h3 { font-family: var(--font-body); font-weight: 700; font-size: 16px; margin: 20px 0 7px; }
+  .legal-body p { color: var(--ink); font-size: 16.5px; line-height: 1.62; margin: 0 0 13px; }
+  .legal-body p.muted { color: var(--ink-soft); font-size: 15px; }
+  .legal-body ul { margin: 0 0 14px; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .legal-body ul li { position: relative; padding-left: 26px; font-size: 16px; line-height: 1.55; color: var(--ink); }
+  .legal-body ul li::before { content: "→"; position: absolute; left: 0; top: 0; color: var(--accent); font-weight: 700; }
+  .legal-body ul li b { font-weight: 700; }
+  .legal-body a.inl { color: var(--accent); text-decoration: none; border-bottom: 1.5px solid color-mix(in oklab, var(--accent) 45%, transparent); }
+  .legal-body a.inl:hover { border-bottom-color: var(--accent); }
+  .legal-callout { border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: var(--accent-soft); box-shadow: 4px 4px 0 var(--ink); padding: 20px 24px; margin: 4px 0 18px; }
+  .legal-callout p { margin: 0; font-size: 15.5px; }
+  .legal-callout .co-label { font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  /* FOOTER */
+  footer.foot { background: var(--ink); color: var(--paper); position: relative; z-index: 1; flex-shrink: 0; }
+  footer.foot .wrap { padding-top: 52px; padding-bottom: 30px; }
+  .foot-grid { display: grid; grid-template-columns: 1.7fr 1fr 1.2fr; gap: 30px; }
+  .foot-col h4 { font-family: var(--font-head); font-size: 24px; margin: 0 0 12px; }
+  .foot-wordmark { font-family: var(--font-head); font-weight: 700; font-size: 21px; color: var(--paper); margin-bottom: 14px; letter-spacing: .5px; }
+  .foot-wordmark span { color: var(--accent); }
+  .foot-col a, .foot-col p { color: color-mix(in oklab, var(--paper) 78%, transparent); text-decoration: none; display: block; font-size: 15px; margin-bottom: 8px; }
+  .foot-col a:hover { color: var(--accent); }
+  .foot-col a.current { color: var(--accent); }
+  .foot-bottom { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 34px; padding-top: 20px; border-top: 2px dashed color-mix(in oklab, var(--paper) 30%, transparent); font-size: 13px; color: color-mix(in oklab, var(--paper) 65%, transparent); }
+  .foot-bottom .fb-links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .foot-bottom .fb-links a { color: color-mix(in oklab, var(--paper) 65%, transparent); text-decoration: none; }
+  .foot-bottom .fb-links a:hover { color: var(--accent); }
+  @media (max-width: 900px) {
+    nav.links, .nav-cta .btn:not(.burger) { display: none; }
+    .burger { display: flex; }
+    .legal-grid { grid-template-columns: 1fr; gap: 26px; }
+    .legal-toc { position: static; }
+    .legal-toc ol { flex-direction: row; flex-wrap: wrap; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    .foot-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body style="">
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="logo" href="index.html">
+      <img class="logo-img" src="assets/rise-logo.png" alt="RISE Furnished Stays">
+    </a>
+    <nav class="links">
+      <a href="index.html">Home</a>
+      <div class="nav-dd">
+        <a href="index.html#book-stay">Units</a>
+        <div class="nav-dd-menu">
+          <a href="unit-a.html">Cozy Home in South Austin</a>
+          <a href="unit-b.html">Entire Home in South Austin</a>
+          <a href="unit-d.html">Private Home in South Austin</a>
+        </div>
+      </div>
+      <a href="austin-guidebook.html">Austin Guidebook</a>
+      <a href="contact.html">Contact Us</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn accent" href="index.html#book-stay" style="text-decoration:none;">Book Direct</a>
+      <button class="btn ghost burger" aria-label="menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<section class="legal-section" data-screen-label="Accessibility">
+  <div class="wrap">
+    <div class="breadcrumb"><a href="index.html">Home</a> / Accessibility</div>
+    <div class="legal-head">
+      <p class="eyebrow">A site everyone can use</p>
+      <h1>Accessibility <span class="u">Statement</span></h1>
+      <p class="lede">We want booking a stay to be easy for everyone, including guests who use assistive technology. Here’s how we approach accessibility — and how to tell us when we fall short.</p>
+      <div class="legal-updated">⟳ Last updated June 2026</div>
+    </div>
+    <div class="legal-grid">
+      <nav class="legal-toc" aria-label="On this page">
+        <div class="toc-label">On this page</div>
+        <ol>
+        <li><a href="#commitment">Our commitment</a></li>
+        <li><a href="#measures">What we do</a></li>
+        <li><a href="#standards">Standards we aim for</a></li>
+        <li><a href="#limitations">Known limitations</a></li>
+        <li><a href="#feedback">Tell us how we’re doing</a></li>
+        </ol>
+      </nav>
+      <div class="legal-body">
+        <section id="commitment">
+          <h2><span class="hn">01</span> Our commitment</h2>
+          <p>RISE Furnished Stays is committed to making this booking website usable for as many people as possible, regardless of ability or the technology they use. Accessibility is part of how we build and maintain the site, not an afterthought.</p>
+        </section>
+        <section id="measures">
+          <h2><span class="hn">02</span> What we do</h2>
+          <ul>
+            <li>Use clear, semantic structure so screen readers can navigate headings, links, and lists.</li>
+            <li>Maintain strong color contrast between text and backgrounds.</li>
+            <li>Support full keyboard navigation through menus, the booking flow, and forms.</li>
+            <li>Write descriptive labels and alternative text for images and controls.</li>
+            <li>Design layouts that adapt to phones, tablets, and zoomed-in screens.</li>
+          </ul>
+        </section>
+        <section id="standards">
+          <h2><span class="hn">03</span> Standards we aim for</h2>
+          <p>We aim to meet the <b>Web Content Accessibility Guidelines (WCAG) 2.1, Level AA</b>. These guidelines explain how to make web content more accessible to people with a wide range of disabilities, and we use them as our benchmark when building and reviewing the site.</p>
+        </section>
+        <section id="limitations">
+          <h2><span class="hn">04</span> Known limitations</h2>
+          <p style="">Some parts of the site rely on third-party tools, such as the availability calendar and payment processing, whose accessibility we do not fully control. If any of these create a barrier for you, contact us and we will help you complete your booking another way.</p>
+        </section>
+        <section id="feedback">
+          <h2><span class="hn">05</span> Tell us how we’re doing</h2>
+          <p>If you run into a barrier on this site, or need information or booking help in a different format, we want to hear from you.</p>
+          <div class="legal-callout">
+            <div class="co-label">Accessibility feedback</div>
+            <p>Email <a class="inl" href="mailto:risefurnishedstays@gmail.com">risefurnishedstays@gmail.com</a> with “Accessibility” in the subject line. We aim to respond within two business days and will work with you directly to help.</p>
+          </div>
+          <p class="muted">This is template accessibility copy for a wireframe; conformance should be verified by audit before launch.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-wordmark"><span>RISE</span> Furnished Stays</div>
+        <p style="color:color-mix(in oklab,var(--paper) 78%, transparent); font-size:15px; max-width:30ch;">Clean and comfortable furnished monthly stays in South Austin. Book direct &amp; save.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Explore</h4>
+        <a href="index.html">Home</a>
+        <a href="index.html#book-stay">Units</a>
+        <a href="austin-guidebook.html">Austin Guidebook</a>
+        <a href="index.html#faq">FAQ</a>
+      </div>
+      <div class="foot-col">
+        <h4>Contact Us</h4>
+        <a href="contact.html">Contact Us Form</a>
+        <p>risefurnishedstays@gmail.com</p>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 RISE Furnished Stays · Wireframe — not final visual design</span>
+      <span class="fb-links"><a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="accessibility.html" style="color:var(--accent);">Accessibility</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="rise-nav.js"></script>
+</body></html>
