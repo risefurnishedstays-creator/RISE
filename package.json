@@ -1,0 +1,9 @@
+{
+  "name": "rise-furnished-stays-api",
+  "version": "2.0.0",
+  "description": "Serverless API for risefurnishedstays.com — Stripe checkout with installment billing, payment webhook, and contact form.",
+  "private": true,
+  "dependencies": {
+    "stripe": "^16.0.0"
+  }
+}
