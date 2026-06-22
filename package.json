@@ -1,0 +1,11 @@
+{
+  "name": "rise-furnished-stays-api",
+  "version": "3.0.0",
+  "description": "Serverless API for risefurnishedstays.com — Stripe installment checkout, contact form, and two-way iCal availability sync.",
+  "private": true,
+  "dependencies": {
+    "@upstash/redis": "^1.38.0",
+    "ical.js": "^2.2.1",
+    "stripe": "^16.0.0"
+  }
+}
