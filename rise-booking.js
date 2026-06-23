@@ -316,7 +316,7 @@
           return { from: b.from, to: b.to, exclusiveEnd: true };
         });
         // Keep any legacy hardcoded ranges too, just in case.
-        U.booked = (U.booked || []).concat(live);
+        U.booked = live;
         rebuildBookedRanges();
         // If current selection now collides with a freshly-loaded booking, reset.
         if (checkIn && checkOut && !rangeClear(checkIn, checkOut)) { checkIn = null; checkOut = null; }
