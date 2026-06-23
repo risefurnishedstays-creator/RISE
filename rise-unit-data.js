@@ -181,9 +181,9 @@ const UNIT_D = {
 };
 
 /* ---- Booked date ranges (synced from each unit's Airbnb iCal) ---- */
-UNIT_A.booked = [{ from: "2026-10-10", to: "2026-11-05" }];
-UNIT_B.booked = [{ from: "2026-06-01", to: "2026-07-27" }];
-UNIT_D.booked = [{ from: "2026-11-15", to: "2026-12-02" }];
+UNIT_A.booked = [];
+UNIT_B.booked = [];
+UNIT_D.booked = [];
 
 /* Placeholder Airbnb iCal export links (owner connects these on build) */
 UNIT_A.airbnb = "https://www.airbnb.com/calendar/ical/1001.ics?s=…";
