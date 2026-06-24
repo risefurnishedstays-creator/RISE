@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Cancel a Booking — RISE Admin</title>
+<style>
+  :root {
+    --ink: #1c2024;
+    --muted: #5c6470;
+    --line: #dfe3e8;
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --danger: #b3261e;
+    --danger-bg: #fdecea;
+    --ok: #1e6b3c;
+    --ok-bg: #eaf6ee;
+    --warn: #8a5a00;
+    --warn-bg: #fff4e0;
+    --accent: #2c3e50;
+    --focus: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 32px 16px 80px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 28px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    margin-bottom: 14px;
+  }
+  input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  button {
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-secondary { background: white; border-color: var(--line); color: var(--ink); }
+  .field-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.92rem; border-bottom: 1px solid #f0f1f3; }
+  .field-row:last-child { border-bottom: none; }
+  .field-row .k { color: var(--muted); }
+  .field-row .v { font-weight: 600; text-align: right; }
+  .banner { border-radius: 8px; padding: 12px 14px; font-size: 0.9rem; margin-bottom: 14px; }
+  .banner.ok { background: var(--ok-bg); color: var(--ok); }
+  .banner.warn { background: var(--warn-bg); color: var(--warn); }
+  .banner.danger { background: var(--danger-bg); color: var(--danger); }
+  .branch-pill {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .branch-pill.full-refund { background: var(--ok-bg); color: var(--ok); }
+  .branch-pill.non-refundable { background: var(--warn-bg); color: var(--warn); }
+  .branch-pill.midstay { background: var(--danger-bg); color: var(--danger); }
+  .hidden { display: none; }
+  .muted { color: var(--muted); font-size: 0.85rem; }
+  .gate { max-width: 360px; margin: 80px auto; }
+  .result-pre { white-space: pre-wrap; font-size: 0.8rem; background: #f4f4f5; padding: 10px; border-radius: 6px; max-height: 200px; overflow: auto; }
+</style>
+</head>
+<body>
+
+<div class="wrap gate" id="gateScreen">
+  <div class="card">
+    <h1>Admin access</h1>
+    <p class="sub">This page issues real Stripe refunds and cancels real bookings. Enter the admin key.</p>
+    <label for="secretInput">Admin key</label>
+    <input id="secretInput" type="password" autocomplete="off" placeholder="••••••••">
+    <button class="btn-primary" id="unlockBtn" style="width:100%;">Unlock</button>
+    <p class="muted" id="gateError" style="color:var(--danger); display:none;">Incorrect key.</p>
+  </div>
+</div>
+
+<div class="wrap hidden" id="mainScreen">
+  <h1>Cancel a Booking</h1>
+  <p class="sub">For your use only, after a guest requests cancellation by email or phone. This is not guest-facing.</p>
+
+  <div class="card">
+    <label for="confCode">Confirmation code</label>
+    <input id="confCode" type="text" placeholder="e.g. ABC1234567" autocomplete="off">
+    <label for="noticeDate">Date notice was given</label>
+    <input id="noticeDate" type="date">
+    <p class="muted" style="margin:-8px 0 14px;">Defaults to today. Backdate this if the guest contacted you earlier than you're processing it now.</p>
+    <button class="btn-primary" id="lookupBtn">Look up &amp; preview</button>
+  </div>
+
+  <div id="previewCard" class="card hidden"></div>
+  <div id="actionResult"></div>
+</div>
+
+<script>
+  const secretKey = "rise_admin_secret"; // sessionStorage key name, not the secret itself
+  let adminSecret = sessionStorage.getItem(secretKey) || "";
+
+  const gateScreen = document.getElementById("gateScreen");
+  const mainScreen = document.getElementById("mainScreen");
+  const gateError = document.getElementById("gateError");
+
+  function showMain() {
+    gateScreen.classList.add("hidden");
+    mainScreen.classList.remove("hidden");
+  }
+
+  // Verify the stored/entered key actually works by hitting the preview
+  // endpoint with a throwaway lookup; 401 means the key is wrong.
+  async function verifyKey(key) {
+    const res = await fetch("/api/cancel-preview?confirmationCode=__verify__", {
+      headers: { "x-admin-secret": key },
+    });
+    return res.status !== 401;
+  }
+
+  (async () => {
+    if (adminSecret && (await verifyKey(adminSecret))) {
+      showMain();
+    }
+  })();
+
+  document.getElementById("unlockBtn").addEventListener("click", async () => {
+    const val = document.getElementById("secretInput").value.trim();
+    if (!val) return;
+    const ok = await verifyKey(val);
+    if (ok) {
+      adminSecret = val;
+      sessionStorage.setItem(secretKey, val);
+      showMain();
+    } else {
+      gateError.style.display = "block";
+    }
+  });
+
+  // ---- Main flow ----
+  let currentBooking = null;
+  let currentOutcome = null;
+  let currentConfCode = null;
+  let currentNoticeDate = null;
+
+  function money(n) { return "$" + Number(n).toLocaleString("en-US"); }
+
+  function branchLabel(branch) {
+    if (branch === "full-refund") return "Full refund";
+    if (branch === "non-refundable") return "Non-refundable";
+    if (branch === "midstay") return "Mid-stay liability";
+    return branch;
+  }
+
+  document.getElementById("lookupBtn").addEventListener("click", async () => {
+    const confCode = document.getElementById("confCode").value.trim();
+    const noticeDate = document.getElementById("noticeDate").value || undefined;
+    const previewCard = document.getElementById("previewCard");
+    const actionResult = document.getElementById("actionResult");
+    actionResult.innerHTML = "";
+    previewCard.classList.remove("hidden");
+
+    if (!confCode) {
+      previewCard.innerHTML = '<div class="banner danger">Enter a confirmation code.</div>';
+      return;
+    }
+
+    previewCard.innerHTML = '<p class="muted">Looking up booking…</p>';
+
+    try {
+      const params = new URLSearchParams({ confirmationCode: confCode });
+      if (noticeDate) params.set("noticeDate", noticeDate);
+      const res = await fetch("/api/cancel-preview?" + params.toString(), {
+        headers: { "x-admin-secret": adminSecret },
+      });
+      const data = await res.json();
+
+      if (res.status === 401) {
+        sessionStorage.removeItem(secretKey);
+        location.reload();
+        return;
+      }
+      if (!res.ok) {
+        previewCard.innerHTML = '<div class="banner danger">' + (data.error || "Lookup failed.") + '</div>';
+        return;
+      }
+
+      currentBooking = data.booking;
+      currentConfCode = confCode;
+      currentNoticeDate = noticeDate;
+
+      if (data.alreadyCancelled) {
+        previewCard.innerHTML =
+          '<div class="banner warn">This booking is already cancelled (status: ' + data.booking.status + '). No action available.</div>';
+        return;
+      }
+
+      currentOutcome = data.outcome;
+      renderPreview(data.booking, data.outcome);
+    } catch (e) {
+      previewCard.innerHTML = '<div class="banner danger">Network error: ' + e.message + '</div>';
+    }
+  });
+
+  function renderPreview(booking, outcome) {
+    const previewCard = document.getElementById("previewCard");
+    const pill = '<span class="branch-pill ' + outcome.branch + '">' + branchLabel(outcome.branch) + '</span>';
+
+    let outcomeLine = "";
+    if (outcome.branch === "full-refund") {
+      outcomeLine = '<div class="field-row"><span class="k">Refund amount</span><span class="v">' + money(outcome.refundAmount) + '</span></div>';
+    } else if (outcome.branch === "non-refundable") {
+      outcomeLine = '<div class="field-row"><span class="k">Refund amount</span><span class="v">$0</span></div>';
+    } else {
+      outcomeLine =
+        '<div class="field-row"><span class="k">Guest liable through</span><span class="v">' + outcome.liabilityEndDate + '</span></div>' +
+        '<div class="field-row"><span class="k">Liable nights</span><span class="v">' + outcome.liableNights + '</span></div>';
+    }
+
+    const dangerNote = outcome.branch === "midstay"
+      ? '<div class="banner danger">Mid-stay cancellation: this only voids future Stripe invoices. It does NOT create a new charge for any partial period owed beyond what\'s already been billed. Review manually before confirming.</div>'
+      : "";
+
+    previewCard.innerHTML =
+      '<h3 style="margin-top:0;">' + pill + '</h3>' +
+      '<div class="field-row"><span class="k">Guest</span><span class="v">' + (booking.guestName || "—") + '</span></div>' +
+      '<div class="field-row"><span class="k">Email</span><span class="v">' + (booking.guestEmail || "—") + '</span></div>' +
+      '<div class="field-row"><span class="k">Unit</span><span class="v">' + booking.unitCode + '</span></div>' +
+      '<div class="field-row"><span class="k">Check-in</span><span class="v">' + booking.checkIn + '</span></div>' +
+      '<div class="field-row"><span class="k">Check-out</span><span class="v">' + booking.checkOut + '</span></div>' +
+      outcomeLine +
+      '<p class="muted" style="margin-top:12px;">' + outcome.message + '</p>' +
+      dangerNote +
+      '<button class="btn-danger" id="confirmBtn" style="margin-top:8px;">Cancel &amp; ' +
+        (outcome.refundable ? "Refund" : "Process") + '</button>' +
+      '<button class="btn-secondary" id="cancelPreviewBtn" style="margin-top:8px; margin-left:8px;">Never mind</button>';
+
+    document.getElementById("cancelPreviewBtn").addEventListener("click", () => {
+      previewCard.classList.add("hidden");
+    });
+
+    document.getElementById("confirmBtn").addEventListener("click", onConfirmCancel);
+  }
+
+  async function onConfirmCancel() {
+    const confirmBtn = document.getElementById("confirmBtn");
+    const sure = confirm(
+      "This will " +
+      (currentOutcome.refundable
+        ? "issue a real Stripe refund of " + money(currentOutcome.refundAmount) + " and "
+        : "") +
+      "permanently cancel booking " + currentConfCode + ". This cannot be undone. Continue?"
+    );
+    if (!sure) return;
+
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Processing…";
+
+    const actionResult = document.getElementById("actionResult");
+    try {
+      const res = await fetch("/api/cancel-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+        body: JSON.stringify({ confirmationCode: currentConfCode, noticeDate: currentNoticeDate }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        actionResult.innerHTML = '<div class="card"><div class="banner danger">Failed: ' + (data.error || "Unknown error") + '</div></div>';
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = "Cancel & " + (currentOutcome.refundable ? "Refund" : "Process");
+        return;
+      }
+
+      actionResult.innerHTML =
+        '<div class="card">' +
+        '<div class="banner ok">Done. Booking ' + data.confirmationCode + ' is now "' + data.status + '".</div>' +
+        '<div class="field-row"><span class="k">Refund ID</span><span class="v">' + (data.refundId || "—") + '</span></div>' +
+        '<div class="field-row"><span class="k">Invoices voided</span><span class="v">' + (data.voidedInvoiceIds.length ? data.voidedInvoiceIds.join(", ") : "—") + '</span></div>' +
+        '<p class="muted">Guest and owner confirmation emails have been sent. Airbnb will unblock the dates on its next calendar sync (usually within a few hours) — this does not push instantly.</p>' +
+        '</div>';
+
+      document.getElementById("previewCard").classList.add("hidden");
+    } catch (e) {
+      actionResult.innerHTML = '<div class="card"><div class="banner danger">Network error: ' + e.message + '</div></div>';
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Cancel & " + (currentOutcome.refundable ? "Refund" : "Process");
+    }
+  }
+</script>
+</body>
+</html>
