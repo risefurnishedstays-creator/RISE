@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+<link rel="apple-touch-icon" href="assets/favicon-180.png" />
+<title>RISE Furnished Stays — Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Libre+Baskerville:wght@400;700&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue:wght@300;400;500;600;700&display=swap" />
+<style>
+  :root {
+    --font-head: 'Libre Baskerville', Georgia, serif;
+    --font-body: 'Work Sans', system-ui, sans-serif;
+    --ink: #2b2926;
+    --ink-soft: #6f6a63;
+    --paper: #f4f1ea;
+    --paper-2: #ece7dc;
+    --line: #2b2926;
+    --accent: oklch(0.64 0.13 45);
+    --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+    --radius-sketch: 255px 12px 225px 14px / 14px 225px 14px 255px;
+    --radius-sketch-2: 14px 225px 14px 255px / 255px 12px 225px 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  :target { scroll-margin-top: 88px; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-weight: 400; font-size: 17px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column;
+  }
+  h1,h2,h3 { font-family: var(--font-head); font-weight: 700; line-height: 1.05; margin: 0; }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background-image:
+      linear-gradient(color-mix(in oklab, var(--ink) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--ink) 4%, transparent) 1px, transparent 1px);
+    background-size: 28px 28px; pointer-events: none; z-index: 0;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 0 28px; width: 100%; }
+  .box { border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: var(--paper); }
+  .box.alt { border-radius: var(--radius-sketch-2); }
+  .btn {
+    font-family: var(--font-body); font-weight: 700; font-size: 16px;
+    border: 2.5px solid var(--line); border-radius: var(--radius-sketch);
+    background: var(--paper); color: var(--ink); padding: 11px 20px; cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink); transition: transform .08s, box-shadow .08s;
+    text-decoration: none; display: inline-block;
+  }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn.accent { background: var(--accent); color: #fff; }
+  .btn.ghost { box-shadow: none; }
+  .note { font-family: var(--font-body); font-style: italic; color: var(--accent); font-size: 14.5px; line-height: 1.35; display: flex; gap: 6px; align-items: flex-start; }
+  .note::before { content: "↳"; font-style: normal; font-weight: 700; }
+  .eyebrow { font-family: ui-monospace, 'SF Mono', Menlo, monospace; text-transform: uppercase; letter-spacing: .18em; font-size: 14px; color: var(--ink-soft); }
+
+  /* NAV */
+  header.nav { position: sticky; top: 0; z-index: 50; background: color-mix(in oklab, var(--paper) 88%, transparent); backdrop-filter: blur(4px); border-bottom: 2.5px solid var(--line); }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .logo { display: flex; align-items: center; gap: 12px; cursor: pointer; text-decoration: none; }
+  .logo-img { height: 60px; width: auto; display: block; }
+  nav.links { display: flex; align-items: center; gap: 0; }
+  nav.links > * { position: relative; }
+  nav.links > *:not(:first-child) { margin-left: 16px; }
+  nav.links > *:not(:first-child)::before { content: "|"; position: absolute; left: -9px; top: 50%; transform: translateY(-50%); color: color-mix(in oklab, var(--ink) 26%, transparent); font-weight: 300; pointer-events: none; }
+  nav.links a { font-family: var(--font-body); font-weight: 400; font-size: 16px; color: var(--ink); text-decoration: none; padding: 8px 13px; border-radius: 8px; border: 2px solid transparent; }
+  nav.links a:hover { border-color: var(--line); background: var(--accent-soft); }
+  nav.links a.current { border-color: var(--line); background: var(--accent); color: #fff; }
+  .nav-cta { display: flex; align-items: center; gap: 14px; }
+  .burger { display: none; }
+
+  /* HERO */
+  .hero { position: relative; z-index: 1; padding: 46px 0 10px; }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 44px; align-items: center; }
+  .hero h1 { font-size: clamp(40px, 5.4vw, 66px); line-height: 1.0; margin-bottom: 18px; }
+  .hero h1 .u { color: var(--accent); }
+  .hero p.sub { font-size: 19px; color: var(--ink-soft); line-height: 1.6; max-width: 42ch; }
+  .pill-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+  .pill { border: 2px solid var(--line); border-radius: 30px; padding: 6px 14px; font-size: 13.5px; font-weight: 600; background: var(--paper); }
+  .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
+  .hero-photo { position: relative; }
+  .hero-photo img { width: 100%; height: 420px; object-fit: cover; border: 2.5px solid var(--line); border-radius: var(--radius-sketch); box-shadow: 6px 7px 0 var(--ink); transform: rotate(1deg); }
+  .hero-tape { position: absolute; top: -14px; right: 28px; transform: rotate(3deg); background: var(--accent); color: #fff; border: 2px solid var(--line); font-family: 'Caveat', cursive; font-size: 21px; padding: 2px 16px; z-index: 2; }
+
+  /* CHOOSE BAND */
+  .choose { text-align: center; padding: 64px 0 8px; position: relative; z-index: 1; }
+  .choose .eyebrow { display: block; margin-bottom: 12px; }
+  .choose h2 { font-size: clamp(30px, 4vw, 46px); }
+  .choose .dash { font-family: 'Caveat', cursive; color: var(--accent); font-size: 30px; margin-top: 6px; }
+
+  /* UNIT CARDS */
+  .units-section { padding: 34px 0 60px; position: relative; z-index: 1; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+  .ucard { display: flex; flex-direction: column; overflow: hidden; text-decoration: none; color: var(--ink); box-shadow: 5px 6px 0 var(--ink); transition: transform .1s, box-shadow .1s; }
+  .ucard:hover { transform: translate(-2px,-2px); box-shadow: 8px 9px 0 var(--ink); }
+  .ucard .uphoto { position: relative; height: 230px; border-bottom: 2.5px solid var(--line); overflow: hidden; }
+  .ucard .uphoto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ucard .ucode { position: absolute; top: 12px; left: 12px; background: var(--paper); border: 2px solid var(--line); border-radius: 7px; font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700; letter-spacing: .08em; padding: 4px 9px; box-shadow: 2px 2px 0 var(--ink); }
+  .ucard .upet { position: absolute; top: 12px; right: 12px; background: var(--accent); color: #fff; border: 2px solid var(--line); border-radius: 7px; font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; letter-spacing: .06em; padding: 4px 9px; box-shadow: 2px 2px 0 var(--ink); }
+  .ucard .ubody { padding: 18px 20px 20px; display: flex; flex-direction: column; flex: 1; }
+  .ucard .urate { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; margin-bottom: 12px; background: var(--accent-soft); border: 2px solid var(--line); border-radius: 30px; padding: 4px 12px; width: max-content; }
+  .ucard .urate .stars { color: var(--accent); letter-spacing: 1px; }
+  .ucard h3 { font-size: 21px; line-height: 1.15; margin-bottom: 8px; }
+  .ucard .uspec { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .04em; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 18px; }
+  .ucard .ufoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 16px; border-top: 2px dashed color-mix(in oklab, var(--ink) 18%, transparent); }
+  .ucard .uprice { font-family: var(--font-head); font-size: 24px; color: var(--accent); }
+  .ucard .uprice small { font-size: 13px; color: var(--ink-soft); font-family: var(--font-body); }
+  .ucard .ubtn { font-family: var(--font-body); font-weight: 700; font-size: 14px; background: var(--accent); color: #fff; border: 2.5px solid var(--line); border-radius: var(--radius-sketch); padding: 8px 16px; box-shadow: 2px 2px 0 var(--ink); white-space: nowrap; transition: transform .08s, box-shadow .08s; }
+  .ucard:hover .ubtn { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
+
+  /* VALUES BAND */
+  .values { padding: 64px 0 54px; position: relative; z-index: 1; }
+  .values-head { text-align: center; margin-bottom: 36px; }
+  .values-head .eyebrow { display: block; margin-bottom: 10px; }
+  .values-head h2 { font-size: clamp(28px, 3.8vw, 42px); }
+  .values-head .dash { font-family: 'Caveat', cursive; color: var(--accent); font-size: 26px; margin-top: 6px; }
+  .values-list { max-width: 660px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px; }
+  .vitem { display: grid; grid-template-columns: 44px 1fr; column-gap: 20px; align-items: start; }
+  .vcheck { width: 44px; height: 44px; border-radius: 50%; border: 2.5px solid var(--line); background: var(--vc-tint); box-shadow: 3px 3px 0 var(--ink); display: flex; align-items: center; justify-content: center; color: var(--vc-ink); flex: none; }
+  .vcheck svg { width: 22px; height: 22px; }
+  .vitem:nth-child(1) { --vc-tint: oklch(0.92 0.05 45); --vc-ink: oklch(0.5 0.13 45); }
+  .vitem:nth-child(2) { --vc-tint: oklch(0.92 0.05 45); --vc-ink: oklch(0.5 0.13 45); }
+  .vitem:nth-child(3) { --vc-tint: oklch(0.92 0.05 45); --vc-ink: oklch(0.5 0.13 45); }
+  .vitem:nth-child(4) { --vc-tint: oklch(0.92 0.05 45); --vc-ink: oklch(0.5 0.13 45); }
+  .vitem h4 { font-family: var(--font-head); font-size: 21px; margin: 0 0 5px; line-height: 1.15; color: var(--vc-ink); }
+  .vitem p { font-size: 15.5px; color: var(--ink-soft); line-height: 1.6; margin: 0; }
+
+  /* NAV DROPDOWN */
+  .nav-dd { position: relative; }
+  .nav-dd > a::after { content: " ▾"; font-size: 16px; }
+  .nav-dd-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 252px; background: var(--paper); border: 2.5px solid var(--line); border-radius: 12px; box-shadow: 4px 5px 0 var(--ink); padding: 7px; display: none; flex-direction: column; gap: 2px; z-index: 60; }
+  .nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu { display: flex; }
+  .nav-dd-menu a { padding: 9px 12px; border-radius: 8px; border: 2px solid transparent; font-size: 14.5px; white-space: nowrap; color: var(--ink); text-decoration: none; }
+  .nav-dd-menu a:hover { border-color: var(--line); background: var(--accent-soft); }
+
+  /* BOOKING FLOW — vertical timeline */
+  .booking-flow { padding: 64px 0 68px; position: relative; z-index: 1; }
+  .booking-flow-head { text-align: center; margin-bottom: 48px; }
+  .booking-flow-head .eyebrow { display: block; margin-bottom: 10px; }
+  .booking-flow-head h2 { font-size: clamp(28px, 3.8vw, 42px); }
+  .booking-flow-head .dash { font-family: 'Caveat', cursive; color: var(--accent); font-size: 26px; margin-top: 6px; }
+  .flow-steps { max-width: 660px; margin: 0 auto; }
+  .flow-step { display: grid; grid-template-columns: 62px 1fr; column-gap: 24px; position: relative; padding-bottom: 34px; }
+  .flow-step:last-child { padding-bottom: 0; }
+  .flow-step::before { content: ''; position: absolute; left: 30px; top: 66px; bottom: -2px; width: 2px; background: repeating-linear-gradient(180deg, var(--ink) 0px, var(--ink) 5px, transparent 5px, transparent 11px); }
+  .flow-step:last-child::before { display: none; }
+  .fs-marker { width: 62px; height: 62px; border-radius: 50%; border: 2.5px solid var(--line); background: var(--paper); box-shadow: 3px 3px 0 var(--ink); display: flex; align-items: center; justify-content: center; font-family: var(--font-head); font-weight: 700; font-size: 25px; color: var(--accent); position: relative; z-index: 1; }
+  .fs-content { padding-top: 8px; min-width: 0; }
+  .fs-title-row { display: flex; align-items: center; gap: 11px; margin-bottom: 7px; }
+  .fs-icon { width: 38px; height: 38px; flex: none; display: flex; align-items: center; justify-content: center; color: var(--accent); background: var(--accent-soft); border: 2.5px solid var(--line); border-radius: 11px; box-shadow: 2px 2px 0 var(--ink); }
+  .fs-icon svg { width: 19px; height: 19px; }
+  .fs-title { font-family: var(--font-head); font-size: 21px; margin: 0; line-height: 1.15; }
+  .fs-desc { font-size: 15px; color: var(--ink-soft); line-height: 1.6; margin: 0; max-width: 48ch; }
+
+  /* FAQ */
+  .faq-section { padding: 64px 0 60px; position: relative; z-index: 1; }
+  .faq-head { text-align: center; margin-bottom: 28px; }
+  .faq-head .eyebrow { display: block; margin-bottom: 10px; }
+  .faq-head h2 { font-size: clamp(28px, 3.6vw, 40px); }
+  .faq-head .dash { font-family: 'Caveat', cursive; color: var(--accent); font-size: 26px; margin-top: 6px; }
+  .faq-grid { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .faq-item { overflow: hidden; box-shadow: 3px 4px 0 var(--ink); }
+  .faq-q { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 22px; cursor: pointer; font-family: var(--font-head); font-weight: 700; font-size: 18px; }
+  .faq-q .pm { font-family: var(--font-body); font-size: 24px; color: var(--accent); transition: transform .2s; line-height: 1; }
+  .faq-item.open .faq-q .pm { transform: rotate(45deg); }
+  .faq-a { max-height: 0; overflow: hidden; transition: max-height .25s ease, padding .25s ease; padding: 0 22px; color: var(--ink-soft); line-height: 1.6; font-size: 15.5px; }
+  .faq-item.open .faq-a { max-height: 760px; padding: 0 22px 20px; }
+
+  /* FOOTER */
+  footer.foot { background: var(--ink); color: var(--paper); position: relative; z-index: 1; flex-shrink: 0; margin-top: 10px; }
+  footer.foot .wrap { padding-top: 52px; padding-bottom: 30px; }
+  .foot-grid { display: grid; grid-template-columns: 1.7fr 1fr 1.2fr; gap: 30px; }
+  .foot-col h4 { font-family: var(--font-head); font-size: 24px; margin: 0 0 12px; }
+  .foot-wordmark { font-family: var(--font-head); font-weight: 700; font-size: 21px; color: var(--paper); margin-bottom: 14px; letter-spacing: .5px; }
+  .foot-wordmark span { color: var(--accent); }
+  .foot-col a, .foot-col p { color: color-mix(in oklab, var(--paper) 78%, transparent); text-decoration: none; display: block; font-size: 15px; margin-bottom: 8px; }
+  .foot-col a:hover { color: var(--accent); }
+  .foot-bottom { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 34px; padding-top: 20px; border-top: 2px dashed color-mix(in oklab, var(--paper) 30%, transparent); font-size: 13px; color: color-mix(in oklab, var(--paper) 65%, transparent); }
+  .foot-bottom .fb-links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .foot-bottom .fb-links a { color: inherit; text-decoration: none; }
+  .foot-bottom .fb-links a:hover { color: var(--accent); }
+  .foot-badge { display: flex; align-items: center; gap: 8px; border: 2px solid color-mix(in oklab,var(--paper) 40%, transparent); border-radius: 30px; padding: 5px 13px; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+
+  @media (max-width: 900px) {
+    nav.links, .nav-cta .btn:not(.burger) { display: none; }
+    .burger { display: flex; }
+    .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+    .cards { grid-template-columns: 1fr; }
+    .values-inner { grid-template-columns: 1fr; }
+    .vitem { grid-template-columns: 38px 1fr; column-gap: 16px; }
+    .vcheck { width: 38px; height: 38px; }
+    .flow-step { grid-template-columns: 52px 1fr; column-gap: 18px; }
+    .fs-marker { width: 52px; height: 52px; font-size: 21px; }
+    .flow-step::before { left: 25px; top: 56px; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) { .foot-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="logo" href="index.html">
+      <img class="logo-img" src="assets/rise-logo.png" alt="RISE Furnished Stays" />
+    </a>
+    <nav class="links">
+      <a href="index.html" class="current">Home</a>
+      <div class="nav-dd">
+        <a href="#book-stay">Units</a>
+        <div class="nav-dd-menu">
+          <a href="unit-a.html">Cozy Home in South Austin</a>
+          <a href="unit-b.html">Entire Home in South Austin</a>
+          <a href="unit-d.html">Private Home in South Austin</a>
+        </div>
+      </div>
+      <a href="austin-guidebook.html">Austin Guidebook</a>
+      <a href="contact.html">Contact Us</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn accent" href="#units">Book Direct</a>
+      <button class="btn ghost burger" aria-label="menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Furnished monthly rentals · South Austin, TX</p>
+      <h1 style="font-family: 'Bebas Neue'; font-size: 104px;">Your home base in <span class="u">South&nbsp;Austin</span></h1>
+      <p class="sub">Clean and comfortable furnished South Austin townhomes for extended stays. Ideal for working professionals, visiting family nearby, and local homeowners between homes or renovations. Book direct &amp; skip the fees.</p>
+      <div class="pill-row">
+        <span class="pill">★ 4.97 guest rating</span>
+        <span class="pill">30+ night stays</span>
+        <span class="pill">Superhosts · 3 yrs</span>
+      </div>
+    </div>
+    <div class="hero-photo">
+      <span class="hero-tape">welcome home ✦</span>
+      <img src="assets/living-room.jpg" alt="Living room of a RISE furnished unit in South Austin" />
+      <div class="hero-cta">
+        <a class="btn accent" href="#units">See the homes ↓</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHOOSE BAND -->
+<div style="position:relative;z-index:1;padding:0 28px;"><div style="max-width:1120px;margin:32px auto 0;border-top:2px dashed color-mix(in oklab,var(--ink) 22%,transparent);"></div></div>
+<section class="choose" id="book-stay">
+  <div class="wrap">
+    <span class="eyebrow">Book your stay today</span>
+    <h2>Choose from one of our 3 homes</h2>
+    <p class="dash">— nearly identical, each with its own character —</p>
+  </div>
+</section>
+
+<!-- UNIT CARDS -->
+<section class="units-section" id="units">
+  <div class="wrap">
+    <div class="cards" id="cards"><!-- injected --></div>
+    <p class="note" style="margin-top:26px; justify-content:center;">Click any home to view full details — amenities, house rules, map &amp; policies.</p>
+  </div>
+</section>
+
+<!-- VALUES -->
+<div style="position:relative;z-index:1;padding:0 28px;"><div style="max-width:1120px;margin:32px auto 0;border-top:2px dashed color-mix(in oklab,var(--ink) 22%,transparent);"></div></div>
+<section class="values">
+  <div class="wrap">
+    <div class="values-head">
+      <span class="eyebrow">What sets us apart</span>
+      <h2>Why book with us?</h2>
+      <p class="dash">— remodeled, central, ready to live —</p>
+    </div>
+    <div class="values-list">
+      <div class="vitem">
+        <span class="vcheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,12.5 9.5,18 20,6"></polyline></svg></span>
+        <div>
+          <h4>Spotless &amp; simple</h4>
+          <p>Newly remodeled, professionally cleaned, and staged exactly as pictured — no surprises at check-in.</p>
+        </div>
+      </div>
+      <div class="vitem">
+        <span class="vcheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,12.5 9.5,18 20,6"></polyline></svg></span>
+        <div>
+          <h4>Central South Austin</h4>
+          <p>Between I-35 &amp; South Lamar — minutes to downtown, major employers, airport, hospitals, and great food.</p>
+        </div>
+      </div>
+      <div class="vitem">
+        <span class="vcheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,12.5 9.5,18 20,6"></polyline></svg></span>
+        <div>
+          <h4>Live &amp; work ready</h4>
+          <p>Fast Wi-Fi, dedicated desks, full kitchens, in-unit laundry, and all utilities included from day one.</p>
+        </div>
+      </div>
+      <div class="vitem">
+        <span class="vcheck"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,12.5 9.5,18 20,6"></polyline></svg></span>
+        <div>
+          <h4>Responsive Superhosts</h4>
+          <p>We're always just a message away — quick to reply and happy to help with anything you need during your stay.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BOOKING FLOW -->
+<div style="position:relative;z-index:1;padding:0 28px;"><div style="max-width:1120px;margin:0 auto;border-top:2px dashed color-mix(in oklab,var(--ink) 22%,transparent);"></div></div>
+<section class="booking-flow" id="how-it-works">
+  <div class="wrap">
+    <div class="booking-flow-head">
+      <span class="eyebrow">How it works</span>
+      <h2>Book your stay in 5 steps</h2>
+      <p class="dash">— direct, transparent, no surprises —</p>
+    </div>
+    <div class="flow-steps">
+
+      <div class="flow-step">
+        <div class="fs-marker">1</div>
+        <div class="fs-content">
+          <div class="fs-title-row">
+            <span class="fs-icon">
+              <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="2" y1="5" x2="20" y2="5"></line>
+                <line x1="2" y1="11" x2="15" y2="11"></line>
+                <line x1="2" y1="17" x2="18" y2="17"></line>
+              </svg>
+            </span>
+            <h4 class="fs-title">Browse &amp; Choose</h4>
+          </div>
+          <p class="fs-desc">Pick from 3 South Austin homes — each sleeps up to 4.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="fs-marker">2</div>
+        <div class="fs-content">
+          <div class="fs-title-row">
+            <span class="fs-icon">
+              <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <rect x="1" y="3" width="20" height="18" rx="2"></rect>
+                <line x1="1" y1="9" x2="21" y2="9"></line>
+                <line x1="7" y1="1" x2="7" y2="5"></line>
+                <line x1="15" y1="1" x2="15" y2="5"></line>
+              </svg>
+            </span>
+            <h4 class="fs-title">Pick Your Dates</h4>
+          </div>
+          <p class="fs-desc">30-night minimum. Select your move-in date and stay length. Describe the purpose of your stay.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="fs-marker">3</div>
+        <div class="fs-content">
+          <div class="fs-title-row">
+            <span class="fs-icon">
+              <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="11" cy="11" r="9"></circle>
+                <line x1="11" y1="6" x2="11" y2="16"></line>
+                <line x1="8" y1="8.5" x2="14" y2="8.5"></line>
+                <line x1="7" y1="13.5" x2="15" y2="13.5"></line>
+              </svg>
+            </span>
+            <h4 class="fs-title">Pay via Stripe</h4>
+          </div>
+          <p class="fs-desc">Secure checkout. First month + cleaning fee + applicable pet fee(s) due at booking.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="fs-marker">4</div>
+        <div class="fs-content">
+          <div class="fs-title-row">
+            <span class="fs-icon">
+              <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L20 9L8 21L1 21L1 14Z"></path>
+                <line x1="11" y1="4" x2="18" y2="11"></line>
+              </svg>
+            </span>
+            <h4 class="fs-title">Sign the Lease</h4>
+          </div>
+          <p class="fs-desc">Digital agreement sent instantly to your inbox for e-signature.</p>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="fs-marker">5</div>
+        <div class="fs-content">
+          <div class="fs-title-row">
+            <span class="fs-icon">
+              <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="2,10 11,2 20,10"></polyline>
+                <rect x="4" y="10" width="14" height="10" rx="1"></rect>
+                <rect x="9" y="15" width="4" height="5"></rect>
+              </svg>
+            </span>
+            <h4 class="fs-title">Welcome Home</h4>
+          </div>
+          <p class="fs-desc">Check-in details &amp; Austin guidebook sent before arrival. Self check-in on day one.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<div style="position:relative;z-index:1;padding:0 28px;"><div style="max-width:1120px;margin:0 auto;border-top:2px dashed color-mix(in oklab,var(--ink) 22%,transparent);"></div></div>
+<section class="faq-section" id="faq">
+  <div class="wrap">
+    <div class="faq-head">
+      <span class="eyebrow">Good to know</span>
+      <h2>Frequently asked questions</h2>
+      <p class="dash">— everything you need to know —</p>
+    </div>
+    <div class="faq-grid" id="faqGrid"></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-wordmark"><span>RISE</span> Furnished Stays</div>
+        <p style="color:color-mix(in oklab,var(--paper) 78%, transparent); font-size:15px; max-width:30ch;">Furnished monthly stays in South Austin. Book direct &amp; save.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Explore</h4>
+        <a href="index.html">Home</a>
+        <a href="#book-stay">Units</a>
+        <a href="austin-guidebook.html">Austin Guidebook</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="foot-col">
+        <h4>Contact Us</h4>
+        <a href="contact.html">Contact Us Form</a>
+        <a href="mailto:risefurnishedstays@gmail.com">risefurnishedstays@gmail.com</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 RISE Furnished Stays</span>
+      <span class="fb-links"><a href="privacy.html">Privacy</a> <a href="terms.html">Terms</a> <a href="accessibility.html">Accessibility</a></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const UNITS = [
+    { code: "Unit A", page: "unit-a.html", petsOk: false,
+      name: "Cozy Home in South Austin", rating: "4.97", reviews: 29,
+      spec: "4 guests · 2 BR · 1.5 BA · Sleeps 4",
+      desc: "The original layout — quiet, bright, and a guest favorite for its spotless self check-in.",
+      img: "assets/unitA/01-living-open.jpg" },
+    { code: "Unit B", page: "unit-b.html", petsOk: true,
+      name: "Entire Home in South Austin", rating: "4.97", reviews: 32,
+      spec: "4 guests · 2 BR · 1.5 BA · Sleeps 4",
+      desc: "The only pet-friendly home, with the biggest backyard — and 5 min from St. David's Medical Center.",
+      img: "assets/unitB/04-living.avif" },
+    { code: "Unit D", page: "unit-d.html", petsOk: false,
+      name: "Private Home in South Austin", rating: "5.0", reviews: 19,
+      spec: "4 guests · 2 BR · 1.5 BA · Sleeps 4",
+      desc: "Our highest-rated home — a perfect ★5.0 for location, and a favorite for longer stays.",
+      img: "assets/unitD/01-living.avif" },
+  ];
+  document.getElementById('cards').innerHTML = UNITS.map((u, i) => `
+    <a class="ucard box ${i%2?'alt':''}" href="${u.page}">
+      <div class="uphoto">
+        <span class="ucode">${u.code}</span>
+        ${u.petsOk ? '<span class="upet">🐾 Pet-friendly</span>' : ''}
+        <img src="${u.img}" alt="${u.code} — ${u.name}" loading="lazy" />
+      </div>
+      <div class="ubody">
+        <div class="urate"><span class="stars">★★★★★</span> <b>${u.rating}</b> <span class="eyebrow" style="letter-spacing:.04em;">· ${u.reviews} reviews</span></div>
+        <h3>${u.name}</h3>
+        <div class="uspec">${u.spec}</div>
+        <div class="ufoot">
+          <div class="uprice">$85<small> / night</small></div>
+          <span class="ubtn">View home →</span>
+        </div>
+      </div>
+    </a>`).join('');
+
+  // ---- FAQ ----
+  const FAQ = [
+    ["Why book with us?", "Our guests consistently choose us for three main reasons: exceptional cleanliness, responsive hosts, and a comfortable, hassle-free stay.<br><br>We aren't a large property management company. When you book with us, you will communicate directly with us, the owners, who care about the guest experience and are available when you need assistance.<br><br>With a 4.97-star average across 80+ stays, seamless self check-in, consistent service, and clean space, we are proud to be superhosts on Airbnb and offer the reliability of a professionally managed property with the personal attention and accountability of an owner-operator."],
+    ["Why book direct instead of Airbnb?", "Booking direct skips the platform service fee, so you get the same stay for less — and you deal with us directly for anything you need."],
+    ["What's the minimum stay?", "All three homes are monthly rentals with a 30-night minimum. We welcome longer stays."],
+    ["Can I book for a larger group?", "Yes. Our three homes sit side by side in the same fourplex, so larger groups can book more than one — up to 12 people total, with each home comfortably sleeping 4. Reach out and we'll coordinate matching dates across the homes you need."],
+    ["What's included in the $85/night?", "A fully furnished home, all utilities, fast Wi-Fi, kitchen essentials, and linens. A cleaning fee and any applicable pet fee(s) are added at checkout."],
+    ["How does payment work?", "When you book directly through this website, you will pay through a secure payment link powered by Stripe. The first month, cleaning fee and applicable pet fee(s) are due at booking — your card is handled by Stripe."],
+    ["What happens after I book?", "Right after you book, you'll receive an email confirming your reservation and payment, along with a link to sign the lease agreement and a link to our <a href='austin-guidebook.html' style='color:var(--accent); font-weight:600;'>Austin guidebook</a> of local favorites. Ahead of your arrival we'll send the exact address, your check-in details and house rules."],
+    ["What's your cancellation policy?", "Cancel more than 30 days before check-in and your first month's rent is refunded in full. Cancel 30 days or fewer before check-in and the first month's rent is non-refundable. If you cancel during your stay, you remain liable for the next 30 nights of rent from the date you give notice."],
+    ["Is parking available?", "Every home includes complimentary on-site parking for two vehicles."],
+    ["Are pets allowed?", "Unit B (Entire Home) is our pet-friendly home and has the largest private backyard of the three homes, so your pet has room to play. We allow up to 2 pets for a non-refundable one-time fee of $50 for each pet. Pets must be under 50 lbs, not a restricted breed, and well-behaved, and we ask that you share each pet's breed and weight when you book."],
+  ];
+  const faqGrid = document.getElementById('faqGrid');
+  faqGrid.innerHTML = FAQ.map(function(f,i){
+    return '<div class="faq-item box ' + (i%2?'alt':'') + '"><div class="faq-q">' + f[0] + '<span class="pm">+</span></div><div class="faq-a">' + f[1] + '</div></div>';
+  }).join('');
+  faqGrid.querySelectorAll('.faq-item').forEach(function(item){
+    item.querySelector('.faq-q').addEventListener('click', function(){ item.classList.toggle('open'); });
+  });
+</script>
+<script src="rise-nav.js"></script>
+</body>
+</html>

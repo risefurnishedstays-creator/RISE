@@ -1,0 +1,303 @@
+<!DOCTYPE html><html lang="en"><head>
+
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/favicon-180.png">
+<title>RISE Furnished Stays — Privacy Policy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&amp;family=Kalam:wght@300;400;700&amp;family=Libre+Baskerville:wght@400;700&amp;family=Work+Sans:wght@300;400;500;600;700&amp;family=Spectral:wght@300;400;600;700&amp;family=Bebas+Neue&amp;display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-head: 'Libre Baskerville', Georgia, serif;
+    --font-body: 'Work Sans', system-ui, sans-serif;
+    --ink: #2b2926;
+    --ink-soft: #6f6a63;
+    --paper: #f4f1ea;
+    --paper-2: #ece7dc;
+    --line: #2b2926;
+    --accent: oklch(0.64 0.13 45);
+    --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+    --radius-sketch: 255px 12px 225px 14px / 14px 225px 14px 255px;
+    --radius-sketch-2: 14px 225px 14px 255px / 255px 12px 225px 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-weight: 400; font-size: 17px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column;
+  }
+  h1, h2, h3 { font-family: var(--font-head); font-weight: 700; line-height: 1.05; margin: 0; }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background-image:
+      linear-gradient(color-mix(in oklab, var(--ink) 4%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in oklab, var(--ink) 4%, transparent) 1px, transparent 1px);
+    background-size: 28px 28px; pointer-events: none; z-index: 0;
+  }
+  .wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 0 28px; width: 100%; }
+  .box { border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: var(--paper); }
+  .box.alt { border-radius: var(--radius-sketch-2); }
+  .btn {
+    font-family: var(--font-body); font-weight: 700; font-size: 16px;
+    border: 2.5px solid var(--line); border-radius: var(--radius-sketch);
+    background: var(--paper); color: var(--ink); padding: 11px 20px; cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink); transition: transform .08s, box-shadow .08s;
+  }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn.accent { background: var(--accent); color: #fff; }
+  .btn.ghost { box-shadow: none; }
+  .note {
+    font-family: var(--font-body); font-style: italic; color: var(--accent);
+    font-size: 14.5px; line-height: 1.35; display: flex; gap: 6px; align-items: flex-start;
+  }
+  .note::before { content: "↳"; font-style: normal; font-weight: 700; }
+  .eyebrow {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    text-transform: uppercase; letter-spacing: .18em; font-size: 12px; color: var(--ink-soft);
+  }
+  /* NAV */
+  header.nav {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in oklab, var(--paper) 88%, transparent);
+    backdrop-filter: blur(4px); border-bottom: 2.5px solid var(--line);
+  }
+  .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .logo { display: flex; align-items: center; gap: 12px; cursor: pointer; text-decoration: none; }
+  .logo-img { height: 60px; width: auto; display: block; }
+  nav.links { display: flex; align-items: center; gap: 0; }
+  nav.links > * { position: relative; }
+  nav.links > *:not(:first-child) { margin-left: 16px; }
+  nav.links > *:not(:first-child)::before { content: "|"; position: absolute; left: -9px; top: 50%; transform: translateY(-50%); color: color-mix(in oklab, var(--ink) 26%, transparent); font-weight: 300; pointer-events: none; }
+  nav.links a {
+    font-family: var(--font-body); font-weight: 400; font-size: 16px; color: var(--ink);
+    text-decoration: none; padding: 8px 13px; border-radius: 8px; border: 2px solid transparent;
+  }
+  nav.links a:hover { border-color: var(--line); background: var(--accent-soft); }
+  nav.links a.current { border-color: var(--line); background: var(--accent); color: #fff; }
+  .nav-cta { display: flex; align-items: center; gap: 14px; }
+  .burger { display: none; }
+  .nav-dd { position: relative; }
+  .nav-dd > a::after { content: " ▾"; font-size: 16px; }
+  .nav-dd-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 252px; background: var(--paper); border: 2.5px solid var(--line); border-radius: 12px; box-shadow: 4px 5px 0 var(--ink); padding: 7px; display: none; flex-direction: column; gap: 2px; z-index: 60; }
+  .nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu { display: flex; }
+  .nav-dd-menu a { padding: 9px 12px; border-radius: 8px; border: 2px solid transparent; font-size: 14.5px; white-space: nowrap; color: var(--ink); text-decoration: none; }
+  .nav-dd-menu a:hover { border-color: var(--line); background: var(--accent-soft); }
+  /* LEGAL */
+  .legal-section { flex: 1 0 auto; padding: 56px 0 70px; position: relative; z-index: 1; }
+  .breadcrumb { font-family: ui-monospace, monospace; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 22px; }
+  .breadcrumb a { color: var(--ink-soft); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--accent); }
+  .legal-head { max-width: 720px; margin-bottom: 14px; }
+  .legal-head h1 { font-size: clamp(38px, 5vw, 56px); line-height: 1.02; margin-bottom: 14px; }
+  .legal-head h1 .u { color: var(--accent); }
+  .legal-head p.lede { font-size: 18px; color: var(--ink-soft); line-height: 1.55; max-width: 56ch; margin: 0; }
+  .legal-updated { font-family: ui-monospace, monospace; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-top: 18px; display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--line); border-radius: 30px; padding: 5px 14px; box-shadow: 2px 2px 0 var(--ink); background: var(--paper); }
+  .legal-grid { display: grid; grid-template-columns: 230px 1fr; gap: 46px; align-items: start; margin-top: 40px; }
+  /* TOC */
+  .legal-toc { position: sticky; top: 92px; }
+  .legal-toc .toc-label { font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 12px; }
+  .legal-toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; display: flex; flex-direction: column; gap: 2px; }
+  .legal-toc a { counter-increment: toc; display: flex; gap: 10px; align-items: baseline; text-decoration: none; color: var(--ink-soft); font-size: 14.5px; padding: 7px 10px; border-radius: 8px; border: 2px solid transparent; line-height: 1.3; }
+  .legal-toc a::before { content: counter(toc, decimal-leading-zero); font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); }
+  .legal-toc a:hover { border-color: var(--line); background: var(--accent-soft); color: var(--ink); }
+  /* body */
+  .legal-body { max-width: 720px; }
+  .legal-body section { padding-bottom: 34px; margin-bottom: 34px; border-bottom: 2px dashed color-mix(in oklab, var(--ink) 18%, transparent); scroll-margin-top: 92px; }
+  .legal-body section:last-of-type { border-bottom: none; }
+  .legal-body h2 { font-size: 25px; margin-bottom: 14px; display: flex; align-items: baseline; gap: 12px; }
+  .legal-body h2 .hn { font-family: ui-monospace, monospace; font-size: 14px; color: var(--accent); font-weight: 400; }
+  .legal-body h3 { font-family: var(--font-body); font-weight: 700; font-size: 16px; margin: 20px 0 7px; }
+  .legal-body p { color: var(--ink); font-size: 16.5px; line-height: 1.62; margin: 0 0 13px; }
+  .legal-body p.muted { color: var(--ink-soft); font-size: 15px; }
+  .legal-body ul { margin: 0 0 14px; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .legal-body ul li { position: relative; padding-left: 26px; font-size: 16px; line-height: 1.55; color: var(--ink); }
+  .legal-body ul li::before { content: "→"; position: absolute; left: 0; top: 0; color: var(--accent); font-weight: 700; }
+  .legal-body ul li b { font-weight: 700; }
+  .legal-body a.inl { color: var(--accent); text-decoration: none; border-bottom: 1.5px solid color-mix(in oklab, var(--accent) 45%, transparent); }
+  .legal-body a.inl:hover { border-bottom-color: var(--accent); }
+  .legal-callout { border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: var(--accent-soft); box-shadow: 4px 4px 0 var(--ink); padding: 20px 24px; margin: 4px 0 18px; }
+  .legal-callout p { margin: 0; font-size: 15.5px; }
+  .legal-callout .co-label { font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  /* FOOTER */
+  footer.foot { background: var(--ink); color: var(--paper); position: relative; z-index: 1; flex-shrink: 0; }
+  footer.foot .wrap { padding-top: 52px; padding-bottom: 30px; }
+  .foot-grid { display: grid; grid-template-columns: 1.7fr 1fr 1.2fr; gap: 30px; }
+  .foot-col h4 { font-family: var(--font-head); font-size: 24px; margin: 0 0 12px; }
+  .foot-wordmark { font-family: var(--font-head); font-weight: 700; font-size: 21px; color: var(--paper); margin-bottom: 14px; letter-spacing: .5px; }
+  .foot-wordmark span { color: var(--accent); }
+  .foot-col a, .foot-col p { color: color-mix(in oklab, var(--paper) 78%, transparent); text-decoration: none; display: block; font-size: 15px; margin-bottom: 8px; }
+  .foot-col a:hover { color: var(--accent); }
+  .foot-col a.current { color: var(--accent); }
+  .foot-bottom { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 34px; padding-top: 20px; border-top: 2px dashed color-mix(in oklab, var(--paper) 30%, transparent); font-size: 13px; color: color-mix(in oklab, var(--paper) 65%, transparent); }
+  .foot-bottom .fb-links { display: flex; gap: 16px; flex-wrap: wrap; }
+  .foot-bottom .fb-links a { color: color-mix(in oklab, var(--paper) 65%, transparent); text-decoration: none; }
+  .foot-bottom .fb-links a:hover { color: var(--accent); }
+  @media (max-width: 900px) {
+    nav.links, .nav-cta .btn:not(.burger) { display: none; }
+    .burger { display: flex; }
+    .legal-grid { grid-template-columns: 1fr; gap: 26px; }
+    .legal-toc { position: static; }
+    .legal-toc ol { flex-direction: row; flex-wrap: wrap; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    .foot-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body style="">
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="logo" href="index.html">
+      <img class="logo-img" src="assets/rise-logo.png" alt="RISE Furnished Stays">
+    </a>
+    <nav class="links">
+      <a href="index.html">Home</a>
+      <div class="nav-dd">
+        <a href="index.html#book-stay">Units</a>
+        <div class="nav-dd-menu">
+          <a href="unit-a.html">Cozy Home in South Austin</a>
+          <a href="unit-b.html">Entire Home in South Austin</a>
+          <a href="unit-d.html">Private Home in South Austin</a>
+        </div>
+      </div>
+      <a href="austin-guidebook.html">Austin Guidebook</a>
+      <a href="contact.html">Contact Us</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn accent" href="index.html#book-stay" style="text-decoration:none;">Book Direct</a>
+      <button class="btn ghost burger" aria-label="menu">☰</button>
+    </div>
+  </div>
+</header>
+
+<section class="legal-section" data-screen-label="Privacy">
+  <div class="wrap">
+    <div class="breadcrumb"><a href="index.html">Home</a> / Privacy Policy</div>
+    <div class="legal-head">
+      <p class="eyebrow">HOW WE HANDLE YOUR INFORMATION</p>
+      <h1>Privacy <span class="u">Policy</span></h1>
+      <p class="lede">When you book directly with us, you share details we need to confirm your reservation and host your stay. This policy explains what we collect, why we collect it, and how we keep it safe.</p>
+      <div class="legal-updated">⟳ Last updated June 2026</div>
+    </div>
+    <div class="legal-grid">
+      <nav class="legal-toc" aria-label="On this page">
+        <div class="toc-label">On this page</div>
+        <ol>
+        <li><a href="#who">Who we are</a></li>
+        <li><a href="#collect">What we collect</a></li>
+        <li><a href="#use">How we use it</a></li>
+        <li><a href="#payments">Payments &amp; Stripe</a></li>
+        <li><a href="#sharing">When we share</a></li>
+        <li><a href="#retention">How long we keep it</a></li>
+        <li><a href="#rights">Your choices &amp; rights</a></li>
+        <li><a href="#contact">Contact us</a></li>
+        </ol>
+      </nav>
+      <div class="legal-body">
+        <section id="who">
+          <h2><span class="hn">01</span> Who we are</h2>
+          <p>RISE Furnished Stays (“we,” “us,” “our”) is an owner-operated host of furnished monthly rentals in South Austin, Texas. This policy applies to information collected through this direct-booking website and the booking process it supports.</p>
+        </section>
+        <section id="collect">
+          <h2><span class="hn">02</span> What we collect</h2>
+          <p>We only collect what we need to take a booking and host your stay:</p>
+          <ul>
+            <li><b>Contact details</b> — your full name, phone number, and email address, entered at checkout.</li>
+            <li><b>Booking details</b> — the home you select, your check-in and check-out dates, number of guests, and any pets.</li>
+            <li><b>Stay context</b> — information you choose to share about the purpose of your stay or special requests.</li>
+            <li><b>Payment information</b> — processed securely by Stripe. We receive confirmation of payment and the last digits/card brand, but we never see or store your full card number.</li>
+            <li><b>Messages</b> — anything you send us through the contact form or by email.</li>
+            <li><b>Basic technical data</b> — standard server and analytics information such as approximate location, device, and pages viewed, used to keep the site working and improve it.</li>
+          </ul>
+        </section>
+        <section id="use">
+          <h2><span class="hn">03</span> How we use your information</h2>
+          <p>We use the information you give us to:</p>
+          <ul>
+            <li>Confirm and manage your reservation and process payments and any monthly installments.</li>
+            <li>Send stay-related messages, such as booking confirmations, the lease agreement, check-in instructions, and our Austin guidebook.</li>
+            <li>Communicate with you before, during, and after your stay, and respond to questions or requests.</li>
+            <li>Check availability and prevent double-bookings across our homes.</li>
+            <li>Keep records required for accounting, tax, and legal purposes.</li>
+            <li>Maintain the security of the site and protect against fraud or misuse.</li>
+          </ul>
+          <div class="legal-callout">
+            <div class="co-label">We don’t sell your data</div>
+            <p>We do not sell, rent, or trade your personal information, and we do not use it for third-party advertising. From time to time we may send you occasional emails about our homes and promotions; you can opt out at any time.</p>
+          </div>
+        </section>
+        <section id="payments">
+          <h2><span class="hn">04</span> Payments &amp; Stripe</h2>
+          <p>Payments are handled by Stripe, a PCI-compliant payment processor. When you pay, your card details are entered on Stripe’s secure checkout and are stored by Stripe. For recurring monthly installments, Stripe securely stores your payment method so charges can run automatically on their due dates. Stripe’s handling of your data is governed by its own privacy policy.</p>
+        </section>
+        <section id="sharing">
+          <h2><span class="hn">05</span> When we share information</h2>
+          <p>We share your information only as needed to host your stay, and only with:</p>
+          <ul>
+            <li><b>Service providers</b> — such as Stripe for payments, our email provider for confirmations and lease documents, and hosting/analytics tools that run the site.</li>
+            <li><b>Airbnb</b> — to keep our calendars in sync and prevent double-bookings. Only the dates of a stay are disclosed; no personal guest details are shared.</li>
+            <li><b>Legal and safety</b> — if required by law, regulation, or legal process, or to protect the rights, property, or safety of our guests, our homes, or others.</li>
+          </ul>
+          <p class="muted">These providers may only use your information to perform services for us, not for their own purposes.</p>
+        </section>
+        <section id="retention">
+          <h2><span class="hn">06</span> How long we keep it</h2>
+          <p>We keep booking and guest records for as long as needed to host your stay and to meet our legal, tax, and accounting obligation. Casual inquiries that do not lead to a booking are kept for a shorter period. When information is no longer needed, we delete or anonymize it.</p>
+        </section>
+        <section id="rights">
+          <h2><span class="hn">07</span> Your choices &amp; rights</h2>
+          <p>You can ask us to access, correct, or delete the personal information we hold about you, subject to records we are required to keep. Depending on where you live, you may have additional rights under laws such as the Texas Data Privacy and Security Act or the GDPR. To make a request, just email us.</p>
+        </section>
+        <section id="contact">
+          <h2><span class="hn">08</span> Contact us</h2>
+          <p>Questions about this policy or your information? We’re happy to help.</p>
+          <div class="legal-callout">
+            <div class="co-label">Privacy requests</div>
+            <p>Email risefurnishedstays@gmail.com with “Privacy” in the subject line. </p>
+          </div>
+          <p class="muted">This is a general privacy policy template and is not legal advice; have it reviewed before launch to confirm it fits your obligations.</p>
+        </section>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-wordmark"><span>RISE</span> Furnished Stays</div>
+        <p style="color:color-mix(in oklab,var(--paper) 78%, transparent); font-size:15px; max-width:30ch;">Clean and comfortable furnished monthly stays in South Austin. Book direct &amp; save.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Explore</h4>
+        <a href="index.html">Home</a>
+        <a href="index.html#book-stay">Units</a>
+        <a href="austin-guidebook.html">Austin Guidebook</a>
+        <a href="index.html#faq">FAQ</a>
+      </div>
+      <div class="foot-col">
+        <h4>Contact Us</h4>
+        <a href="contact.html">Contact Us Form</a>
+        <p>risefurnishedstays@gmail.com</p>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 RISE Furnished Stays</span>
+      <span class="fb-links"><a href="privacy.html" style="color:var(--accent);">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="accessibility.html">Accessibility</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="rise-nav.js"></script>
+</body></html>
