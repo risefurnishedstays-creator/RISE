@@ -50,6 +50,6 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate);
+  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets);
   return res.status(200).json({ booking, outcome, alreadyCancelled: false });
 };

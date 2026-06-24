@@ -72,7 +72,7 @@ module.exports = async function handler(req, res) {
     return res.status(409).json({ error: "Booking is already cancelled.", booking });
   }
 
-  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate);
+  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets);
 
   // ---- Stripe: refund (if applicable) ----
   let refund = null;
@@ -163,6 +163,15 @@ module.exports = async function handler(req, res) {
   }
 
   // ---- Emails ----
+  // Sent independently (not in one shared try/catch) so a bad/bogus guest
+  // email address can't silently suppress the owner notification too --
+  // that happened in testing: an invalid guest address caused the whole
+  // block to throw after only the first await, and since the catch only
+  // logs, the response still looked like a clean success despite BOTH
+  // emails actually failing to send.
+  let guestEmailError = null;
+  let ownerEmailError = null;
+
   try {
     await sendEmail({
       to: booking.guestEmail,
@@ -174,6 +183,12 @@ module.exports = async function handler(req, res) {
         outcome,
       }),
     });
+  } catch (e) {
+    guestEmailError = e.message;
+    console.error("Guest cancellation email failed (non-fatal) for", confirmationCode, "to", booking.guestEmail, ":", e.message);
+  }
+
+  try {
     await sendEmail({
       to: "risefurnishedstays@gmail.com",
       subject: `Cancellation: ${confirmationCode} (${outcome.branch})`,
@@ -185,7 +200,8 @@ module.exports = async function handler(req, res) {
       }),
     });
   } catch (e) {
-    console.error("Cancellation emails failed (non-fatal) for", confirmationCode, e.message);
+    ownerEmailError = e.message;
+    console.error("Owner cancellation email failed (non-fatal) for", confirmationCode, ":", e.message);
   }
 
   return res.status(200).json({
@@ -193,6 +209,8 @@ module.exports = async function handler(req, res) {
     status: newStatus,
     outcome,
     refundId: refund ? refund.id : null,
+    guestEmailError, // null if sent successfully -- surfaced so the admin page can flag it
+    ownerEmailError,
     voidedInvoiceIds,
   });
 };

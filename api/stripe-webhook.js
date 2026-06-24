@@ -113,6 +113,7 @@ async function handleCheckoutCompleted(session) {
       checkIn: meta.checkIn,
       checkOut: meta.checkOut,
       nights: meta.nights,
+      pets: meta.pets ? parseInt(meta.pets, 10) || 0 : 0, // needed by cancellationOutcome() to refund pet fees correctly
       status: "confirmed",
       paymentIntentId: session.payment_intent,
       stripeCustomerId: customerId,
