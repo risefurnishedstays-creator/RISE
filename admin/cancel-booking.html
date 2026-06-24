@@ -241,9 +241,12 @@
 
     let outcomeLine = "";
     if (outcome.branch === "full-refund") {
-      outcomeLine = '<div class="field-row"><span class="k">Refund amount</span><span class="v">' + money(outcome.refundAmount) + '</span></div>';
+      outcomeLine =
+        '<div class="field-row"><span class="k">Refund amount</span><span class="v">' + money(outcome.refundAmount) + '</span></div>' +
+        '<div class="field-row"><span class="k">&nbsp;&nbsp;— rent</span><span class="v">' + money(outcome.rentRefund) + '</span></div>' +
+        '<div class="field-row"><span class="k">&nbsp;&nbsp;— cleaning + pet fees</span><span class="v">' + money(outcome.feeRefund) + '</span></div>';
     } else if (outcome.branch === "non-refundable") {
-      outcomeLine = '<div class="field-row"><span class="k">Refund amount</span><span class="v">$0</span></div>';
+      outcomeLine = '<div class="field-row"><span class="k">Refund amount</span><span class="v">$0 (rent + fees kept)</span></div>';
     } else {
       outcomeLine =
         '<div class="field-row"><span class="k">Guest liable through</span><span class="v">' + outcome.liabilityEndDate + '</span></div>' +
@@ -305,12 +308,24 @@
         return;
       }
 
+      let emailStatusHtml;
+      if (!data.guestEmailError && !data.ownerEmailError) {
+        emailStatusHtml = '<p class="muted">Guest and owner confirmation emails have been sent.</p>';
+      } else {
+        emailStatusHtml = '<div class="banner warn">';
+        if (data.guestEmailError) emailStatusHtml += 'Guest email FAILED to send: ' + data.guestEmailError + '<br>';
+        if (data.ownerEmailError) emailStatusHtml += 'Owner email FAILED to send: ' + data.ownerEmailError + '<br>';
+        emailStatusHtml += 'The cancellation itself still went through -- only the notification email(s) failed. You may want to follow up with the guest directly.';
+        emailStatusHtml += '</div>';
+      }
+
       actionResult.innerHTML =
         '<div class="card">' +
         '<div class="banner ok">Done. Booking ' + data.confirmationCode + ' is now "' + data.status + '".</div>' +
         '<div class="field-row"><span class="k">Refund ID</span><span class="v">' + (data.refundId || "—") + '</span></div>' +
         '<div class="field-row"><span class="k">Invoices voided</span><span class="v">' + (data.voidedInvoiceIds.length ? data.voidedInvoiceIds.join(", ") : "—") + '</span></div>' +
-        '<p class="muted">Guest and owner confirmation emails have been sent. Airbnb will unblock the dates on its next calendar sync (usually within a few hours) — this does not push instantly.</p>' +
+        emailStatusHtml +
+        '<p class="muted">Airbnb will unblock the dates on its next calendar sync (usually within a few hours) — this does not push instantly.</p>' +
         '</div>';
 
       document.getElementById("previewCard").classList.add("hidden");
