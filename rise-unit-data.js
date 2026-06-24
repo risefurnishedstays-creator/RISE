@@ -185,10 +185,10 @@ UNIT_A.booked = [];
 UNIT_B.booked = [];
 UNIT_D.booked = [];
 
-/* Placeholder Airbnb iCal export links (owner connects these on build) */
-UNIT_A.airbnb = "https://www.airbnb.com/calendar/ical/1001.ics?s=…";
-UNIT_B.airbnb = "https://www.airbnb.com/calendar/ical/1002.ics?s=…";
-UNIT_D.airbnb = "https://www.airbnb.com/calendar/ical/1003.ics?s=…";
+/* Airbnb iCal export links */
+UNIT_A.airbnb = "https://www.airbnb.com/calendar/ical/1124136446684529095.ics?t=c84f1fcbdcda4254bd46dd868174f4a8";
+UNIT_B.airbnb = "https://www.airbnb.com/calendar/ical/1064810260534661979.ics?t=b794bd616226406c8242a6b88cdc55d8";
+UNIT_D.airbnb = "https://www.airbnb.com/calendar/ical/1104342174169050925.ics?t=0bd5f1739ccb4eb2b7919e48558d6a65";
 
 /* ---- Unit lookup map (used by the Checkout / Confirmation pages) ---- */
 window.RISE_UNITS = { A: UNIT_A, B: UNIT_B, D: UNIT_D };
