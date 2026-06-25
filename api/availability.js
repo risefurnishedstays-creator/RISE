@@ -69,8 +69,15 @@ module.exports = async function handler(req, res) {
       return true;
     });
 
-    // Short cache so the calendar is fresh but we don't hammer Airbnb on every load
-    res.setHeader("Cache-Control", "public, max-age=900"); // 15 min
+    // Cache briefly so we don't hammer Airbnb on every page load, but keep
+    // it short -- a long cache here previously masked a Redis cleanup for
+    // longer than expected (the calendar looked "fixed" only after the
+    // browser/CDN cache happened to expire, not right when the data changed).
+    // s-maxage controls Vercel's edge cache specifically; max-age is the
+    // browser's own cache. Keeping both short means a manual cleanup (like
+    // deleting test bookings) shows up quickly instead of being masked by
+    // a stale cached response.
+    res.setHeader("Cache-Control", "public, max-age=60, s-maxage=60");
     return res.status(200).json({ unit, booked: merged });
   } catch (error) {
     console.error("Availability error:", error);
