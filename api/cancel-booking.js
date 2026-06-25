@@ -88,7 +88,7 @@ module.exports = async function handler(req, res) {
         refund = await stripe.refunds.create({
           payment_intent: booking.paymentIntentId,
           amount: outcome.refundAmount * 100, // cents
-          metadata: { confirmationCode, reason: "policy:full-refund" },
+          metadata: { confirmationCode, reason: "policy:" + outcome.branch },
         });
       } catch (e) {
         console.error("Stripe refund failed for", confirmationCode, e.message);
