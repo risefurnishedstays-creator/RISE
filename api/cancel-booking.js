@@ -177,6 +177,7 @@ module.exports = async function handler(req, res) {
     await sendEmail({
       to: booking.guestEmail,
       subject: `Cancellation Confirmed — RISE Furnished Stays`,
+      replyTo: "risefurnishedstays@gmail.com", // sender address is unmonitored -- route any reply to the real inbox
       html: cancellationGuestEmail({
         guestName: booking.guestName,
         unitCode: booking.unitCode,

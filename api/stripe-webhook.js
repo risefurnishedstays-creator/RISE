@@ -160,8 +160,10 @@ async function handleCheckoutCompleted(session) {
   await sendEmail({
     to: meta.guestEmail || session.customer_email,
     subject: `Booking Confirmed — ${meta.unitName || "RISE Furnished Stays"}`,
+    replyTo: "risefurnishedstays@gmail.com", // sender address is unmonitored -- route any reply to the real inbox
     html: guestConfirmationEmail({
       guestName: meta.guestName || "Guest",
+      unitCode: meta.unitCode,
       unitName: meta.unitName || "your unit",
       checkIn: meta.checkIn,
       checkOut: meta.checkOut,
