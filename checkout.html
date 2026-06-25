@@ -506,7 +506,22 @@
     if (cell && cell.dataset.date) pickDay(cell.dataset.date);
   }
   function openCal(mode) {
-    tmpIn = checkIn; tmpOut = checkOut; calMsg = '';
+    // When reopening specifically to adjust the CHECKOUT date (mode === 'out'),
+    // keep tmpIn as the already-committed check-in date but clear tmpOut to
+    // null. This matters because pickDay()'s branch logic (`!tmpIn || tmpOut`)
+    // treats a non-null tmpOut as "a full range is already selected, so a
+    // new click should start a brand new range" -- which is exactly wrong
+    // when the guest just wants to pick a different checkout date without
+    // re-picking check-in. Re-copying the committed checkOut into tmpOut
+    // here was the bug: it made every checkout-field click look like a
+    // freshly-committed range, so the very next click reset check-in instead
+    // of updating checkout.
+    if (mode === 'out' && checkIn) {
+      tmpIn = checkIn; tmpOut = null;
+    } else {
+      tmpIn = checkIn; tmpOut = checkOut;
+    }
+    calMsg = '';
     pickMode = (mode === 'out' && tmpIn) ? 'out' : 'in';
     var base = (pickMode === 'out' && tmpIn) ? tmpIn : (tmpIn || firstOpen());
     calRef = new Date(base.getFullYear(), base.getMonth(), 1);
