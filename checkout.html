@@ -391,7 +391,9 @@
     gid('bnote').textContent =
       'No booking fees · Full refund if cancelled by ' + fmtLong(fullRefundCutoff);
 
-    var dueInfo = 'Today you pay for the first 30 nights (' + money(p.first30) + ') plus the cleaning fee (' + money(p.cleaning) + ')' + (p.petFee > 0 ? ' and the pet fee (' + money(p.petFee) + ')' : '') + '. Remaining nights are charged on the scheduled dates below.';
+    var dueInfo = p.petFee > 0
+      ? 'The first 30 nights (' + money(p.first30) + '), cleaning fee (' + money(p.cleaning) + '), and pet fee (' + money(p.petFee) + ') are due today.'
+      : 'The first 30 nights (' + money(p.first30) + ') and cleaning fee (' + money(p.cleaning) + ') are due today.';
     var payments = [{ label: 'Payment 1', badge: 'Due today', badgeCls: 'due', amount: p.dueToday, date: null }];
     if (p.paymentDates && p.paymentDates.length) {
       p.paymentDates.forEach(function (pd, i) {
