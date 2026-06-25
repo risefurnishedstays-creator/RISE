@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Canned Messages — RISE Admin</title>
+<style>
+  :root {
+    --ink: #1c2024; --muted: #5c6470; --line: #dfe3e8; --bg: #f7f8fa; --card: #ffffff;
+    --ok: #1e6b3c; --ok-bg: #eaf6ee; --danger: #b3261e; --danger-bg: #fdecea; --accent: #2c3e50;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink); padding: 32px 16px 80px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  input[type=text], input[type=password], textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 0.95rem; margin-bottom: 14px; font-family: inherit;
+  }
+  textarea { min-height: 110px; resize: vertical; }
+  button { font-size: 0.9rem; font-weight: 600; padding: 9px 16px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: white; border-color: var(--line); color: var(--ink); }
+  .btn-danger { background: var(--danger); color: white; }
+  .gate { max-width: 360px; margin: 80px auto; }
+  .hidden { display: none; }
+  .banner { border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; margin-bottom: 12px; }
+  .banner.ok { background: var(--ok-bg); color: var(--ok); }
+  .banner.danger { background: var(--danger-bg); color: var(--danger); }
+  .msg-item { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+  .msg-title { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+  .msg-body { font-size: 0.9rem; color: var(--ink); white-space: pre-wrap; margin-bottom: 10px; line-height: 1.5; }
+  .msg-actions { display: flex; gap: 8px; }
+  .msg-actions button { padding: 6px 12px; font-size: 0.82rem; }
+  .empty { color: var(--muted); font-size: 0.9rem; text-align: center; padding: 20px; }
+</style>
+</head>
+<body>
+
+<div class="wrap gate" id="gateScreen">
+  <div class="card">
+    <h1>Admin access</h1>
+    <p class="sub">A personal library of pre-written replies for common guest questions.</p>
+    <label for="secretInput">Admin key</label>
+    <input id="secretInput" type="password" autocomplete="off" placeholder="••••••••">
+    <button class="btn-primary" id="unlockBtn" style="width:100%;">Unlock</button>
+    <p class="sub" id="gateError" style="color:var(--danger); display:none;">Incorrect key.</p>
+  </div>
+</div>
+
+<div class="wrap hidden" id="mainScreen">
+  <h1>Canned Messages</h1>
+  <p class="sub">Draft a reply once, save it here, and copy it whenever a matching question comes in. Nothing here sends automatically.</p>
+
+  <div class="card">
+    <div id="formBanner"></div>
+    <label for="titleInput">Title (for your own reference)</label>
+    <input id="titleInput" type="text" placeholder="e.g. Pet policy question">
+    <label for="bodyInput">Message body</label>
+    <textarea id="bodyInput" placeholder="The actual reply text you'll copy and send..."></textarea>
+    <input type="hidden" id="editingId" value="">
+    <button class="btn-primary" id="saveBtn">Save message</button>
+    <button class="btn-secondary hidden" id="cancelEditBtn">Cancel edit</button>
+  </div>
+
+  <div id="listWrap"></div>
+</div>
+
+<script>
+  const secretKey = "rise_admin_secret";
+  let adminSecret = sessionStorage.getItem(secretKey) || "";
+  const API_BASE = "https://rise-eta-three.vercel.app"; // CHANGE THIS if your Vercel URL ever changes
+
+  const gateScreen = document.getElementById("gateScreen");
+  const mainScreen = document.getElementById("mainScreen");
+  const gateError = document.getElementById("gateError");
+
+  function showMain() { gateScreen.classList.add("hidden"); mainScreen.classList.remove("hidden"); loadMessages(); }
+
+  async function verifyKey(key) {
+    try {
+      const res = await fetch(API_BASE + "/api/canned-messages", { headers: { "x-admin-secret": key } });
+      return res.status !== 401;
+    } catch (e) { return false; }
+  }
+
+  (async () => { if (adminSecret && (await verifyKey(adminSecret))) showMain(); })();
+
+  document.getElementById("unlockBtn").addEventListener("click", async () => {
+    const val = document.getElementById("secretInput").value.trim();
+    if (!val) return;
+    if (await verifyKey(val)) {
+      adminSecret = val;
+      sessionStorage.setItem(secretKey, val);
+      showMain();
+    } else {
+      gateError.style.display = "block";
+    }
+  });
+
+  function esc(s) {
+    const d = document.createElement("div");
+    d.textContent = s === undefined || s === null ? "" : String(s);
+    return d.innerHTML;
+  }
+
+  async function loadMessages() {
+    const listWrap = document.getElementById("listWrap");
+    listWrap.innerHTML = '<p class="sub">Loading…</p>';
+    try {
+      const res = await fetch(API_BASE + "/api/canned-messages", { headers: { "x-admin-secret": adminSecret } });
+      const data = await res.json();
+      if (!res.ok) {
+        listWrap.innerHTML = '<div class="banner danger">Failed to load: ' + (data.error || "Unknown error") + '</div>';
+        return;
+      }
+      renderList(data.messages || []);
+    } catch (e) {
+      listWrap.innerHTML = '<div class="banner danger">Network error: ' + e.message + '</div>';
+    }
+  }
+
+  function renderList(messages) {
+    const listWrap = document.getElementById("listWrap");
+    if (!messages.length) {
+      listWrap.innerHTML = '<div class="card"><p class="empty">No saved messages yet. Add your first one above.</p></div>';
+      return;
+    }
+    let html = '<div class="card">';
+    messages.forEach((m) => {
+      html += '<div class="msg-item">' +
+        '<div class="msg-title">' + esc(m.title) + '</div>' +
+        '<div class="msg-body">' + esc(m.body) + '</div>' +
+        '<div class="msg-actions">' +
+          '<button class="btn-primary" onclick="copyMessage(' + "'" + m.id + "'" + ')">Copy</button>' +
+          '<button class="btn-secondary" onclick="editMessage(' + "'" + m.id + "'" + ')">Edit</button>' +
+          '<button class="btn-danger" onclick="deleteMessage(' + "'" + m.id + "'" + ')">Delete</button>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    listWrap.innerHTML = html;
+    window._cannedMessages = messages; // stash for copy/edit lookups without another fetch
+  }
+
+  function showFormBanner(text, tone) {
+    const el = document.getElementById("formBanner");
+    el.innerHTML = '<div class="banner ' + tone + '">' + text + '</div>';
+    setTimeout(() => { el.innerHTML = ""; }, 3000);
+  }
+
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    const title = document.getElementById("titleInput").value.trim();
+    const body = document.getElementById("bodyInput").value.trim();
+    const editingId = document.getElementById("editingId").value;
+    if (!title || !body) { showFormBanner("Title and message body are both required.", "danger"); return; }
+
+    try {
+      const url = API_BASE + "/api/canned-messages" + (editingId ? "?id=" + encodeURIComponent(editingId) : "");
+      const res = await fetch(url, {
+        method: editingId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+        body: JSON.stringify({ title, body }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showFormBanner("Failed: " + (data.error || "Unknown error"), "danger"); return; }
+      showFormBanner(editingId ? "Updated." : "Saved.", "ok");
+      document.getElementById("titleInput").value = "";
+      document.getElementById("bodyInput").value = "";
+      document.getElementById("editingId").value = "";
+      document.getElementById("cancelEditBtn").classList.add("hidden");
+      document.getElementById("saveBtn").textContent = "Save message";
+      loadMessages();
+    } catch (e) {
+      showFormBanner("Network error: " + e.message, "danger");
+    }
+  });
+
+  document.getElementById("cancelEditBtn").addEventListener("click", () => {
+    document.getElementById("titleInput").value = "";
+    document.getElementById("bodyInput").value = "";
+    document.getElementById("editingId").value = "";
+    document.getElementById("cancelEditBtn").classList.add("hidden");
+    document.getElementById("saveBtn").textContent = "Save message";
+  });
+
+  function editMessage(id) {
+    const m = (window._cannedMessages || []).find((x) => x.id === id);
+    if (!m) return;
+    document.getElementById("titleInput").value = m.title;
+    document.getElementById("bodyInput").value = m.body;
+    document.getElementById("editingId").value = m.id;
+    document.getElementById("cancelEditBtn").classList.remove("hidden");
+    document.getElementById("saveBtn").textContent = "Update message";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function copyMessage(id) {
+    const m = (window._cannedMessages || []).find((x) => x.id === id);
+    if (!m) return;
+    try {
+      await navigator.clipboard.writeText(m.body);
+      showFormBanner('Copied "' + m.title + '" to clipboard.', "ok");
+    } catch (e) {
+      showFormBanner("Could not copy automatically -- select and copy the text manually.", "danger");
+    }
+  }
+
+  async function deleteMessage(id) {
+    const m = (window._cannedMessages || []).find((x) => x.id === id);
+    if (!confirm('Delete "' + (m ? m.title : id) + '"? This cannot be undone.')) return;
+    try {
+      const res = await fetch(API_BASE + "/api/canned-messages?id=" + encodeURIComponent(id), {
+        method: "DELETE",
+        headers: { "x-admin-secret": adminSecret },
+      });
+      const data = await res.json();
+      if (!res.ok) { showFormBanner("Failed to delete: " + (data.error || "Unknown error"), "danger"); return; }
+      loadMessages();
+    } catch (e) {
+      showFormBanner("Network error: " + e.message, "danger");
+    }
+  }
+</script>
+</body>
+</html>
