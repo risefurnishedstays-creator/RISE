@@ -110,7 +110,7 @@
             '<li>A confirmation email with your full payment breakdown and receipt is on its way.</li>' +
             '<li>We’ll send the exact address and check-in details closer to your arrival.</li>' +
             '<li>You’ll receive a separate email with the lease agreement to review and sign.</li>' +
-            '<li>Questions before then? Reach out via our <a href="contact.html" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">contact page</a> or at <a href="mailto:risefurnishedstays@gmail.com" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">risefurnishedstays@gmail.com</a>.</li>' +
+            '<li>Questions before then? Reach out via our <a href="contact.html" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">contact page</a> or at risefurnishedstays@gmail.com.</li>' +
           '</ul>' +
         '</div>' +
         '<div class="cf-actions">' +
