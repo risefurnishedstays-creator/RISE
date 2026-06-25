@@ -246,7 +246,10 @@
         '<div class="field-row"><span class="k">&nbsp;&nbsp;— rent</span><span class="v">' + money(outcome.rentRefund) + '</span></div>' +
         '<div class="field-row"><span class="k">&nbsp;&nbsp;— cleaning + pet fees</span><span class="v">' + money(outcome.feeRefund) + '</span></div>';
     } else if (outcome.branch === "non-refundable") {
-      outcomeLine = '<div class="field-row"><span class="k">Refund amount</span><span class="v">$0 (rent + fees kept)</span></div>';
+      outcomeLine =
+        '<div class="field-row"><span class="k">Refund amount</span><span class="v">' + money(outcome.refundAmount) + '</span></div>' +
+        '<div class="field-row"><span class="k">&nbsp;&nbsp;— rent</span><span class="v">$0 (non-refundable)</span></div>' +
+        '<div class="field-row"><span class="k">&nbsp;&nbsp;— cleaning + pet fees</span><span class="v">' + money(outcome.feeRefund) + ' (refunded)</span></div>';
     } else {
       outcomeLine =
         '<div class="field-row"><span class="k">Guest liable through</span><span class="v">' + outcome.liabilityEndDate + '</span></div>' +
