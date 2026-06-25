@@ -262,6 +262,16 @@
   abPop.addEventListener('mouseleave', function () { if (hoverDay) { hoverDay = null; applyHover(); } });
 
   function openCal(mode) {
+    // When reopening specifically to change the CHECKOUT date (mode === 'out')
+    // on an already-committed stay, clear checkOut to null first. Without
+    // this, pickDay()'s "!checkIn || checkOut" branch sees the existing
+    // checkOut as a sign that a full range was just selected, and treats
+    // the next click as the start of a brand new range -- wiping checkIn
+    // instead of just updating checkout. This mirrors the same fix applied
+    // to checkout.html's date picker for the identical underlying bug.
+    if (mode === 'out' && checkIn && checkOut) {
+      checkOut = null;
+    }
     pickMode = (mode === 'out' && checkIn) ? 'out' : 'in';
     var base = (pickMode === 'out' && checkIn) ? checkIn : (checkIn || firstOpen);
     calRef = new Date(base.getFullYear(), base.getMonth(), 1);
@@ -325,7 +335,11 @@
       msgEl.textContent = checkIn ? 'Now select your check-out date.' : '';
       msgEl.className = 'abnb-msg hint';
       abBook.textContent = 'Check availability';
-      abBook.disabled = true;
+      // Button stays ENABLED here (not disabled) so a click is always
+      // possible -- the click handler below shows a clear validation
+      // message via abMsg if dates are still missing, rather than the
+      // button silently doing nothing, which is what disabled caused.
+      abBook.disabled = false;
       noteEl.textContent = 'No booking fees \u00b7 book direct & save';
     } else if (n < MIN_NIGHTS) {
       priceEl.innerHTML = '<div class="abnb-bigprice">' + money(NIGHTLY) + ' <span class="abnb-per">/ night</span></div><div class="abnb-sub">' + n + ' nights selected</div>';
@@ -354,7 +368,19 @@
   if (abPets) abPets.addEventListener('change', function () { if (breakdownOpen) renderBreakdown(); updateCard(); });
 
   abBook.addEventListener('click', function () {
-    if (abBook.disabled || !checkIn || !checkOut) return;
+    if (!checkIn || !checkOut) {
+      var msgEl = document.getElementById('abMsg');
+      msgEl.textContent = !checkIn
+        ? 'Please select a check-in date to continue.'
+        : 'Please select a check-out date to continue.';
+      msgEl.className = 'abnb-msg warn';
+      // Open the calendar pointed at whichever date is still missing, so
+      // the guest doesn't just see an error -- they're taken straight to
+      // the fix.
+      openCal(!checkIn ? 'in' : 'out');
+      return;
+    }
+    if (abBook.disabled) return; // still blocked for the "stay too short" case
     var params = new URLSearchParams({
       u: (U.code || '').replace(/^Unit\s*/i, ''),
       in: key(checkIn), out: key(checkOut),
