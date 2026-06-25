@@ -15,9 +15,9 @@ const Stripe = require("stripe");
 const { priceParts, validateBooking } = require("../lib/pricing");
 
 const UNIT_NAMES = {
-  A: "Unit A",
-  B: "Unit B",
-  D: "Unit D",
+  A: "Cozy Home in South Austin",
+  B: "Entire Home in South Austin",
+  D: "Private Home in South Austin",
 };
 
 module.exports = async function handler(req, res) {
