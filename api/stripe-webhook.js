@@ -16,11 +16,12 @@
 
 const Stripe = require("stripe");
 const { sendEmail } = require("../lib/sendEmail");
-const { saveBooking } = require("../lib/bookings");
+const { saveBooking, getBooking } = require("../lib/bookings");
 const {
   guestConfirmationEmail,
   ownerNotificationEmail,
   paymentFailedOwnerEmail,
+  paymentFailedGuestEmail,
 } = require("../lib/emailTemplates");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -198,6 +199,8 @@ async function handleCheckoutCompleted(session) {
 
 async function handleInvoiceFailed(invoice) {
   const meta = invoice.metadata || {};
+
+  // ---- Owner notification (unchanged) ----
   await sendEmail({
     to: "risefurnishedstays@gmail.com",
     subject: `\u26a0\ufe0f Installment payment FAILED — ${meta.unitCode || "booking"} ${meta.confirmationCode || ""}`,
@@ -209,4 +212,55 @@ async function handleInvoiceFailed(invoice) {
       guestEmail: invoice.customer_email || "(unknown)",
     }),
   });
+
+  // ---- Guest notification, with a real Stripe-hosted link to update their card ----
+  // The Billing Portal session is created fresh per failure (sessions are
+  // single-use-ish and short-lived by design) rather than reusing a saved
+  // URL, so it's always valid when the guest actually clicks it.
+  if (!invoice.customer) {
+    console.error("CRITICAL: invoice.payment_failed with no customer ID, cannot email guest or build portal link:", meta.confirmationCode);
+    return;
+  }
+
+  let portalUrl = null;
+  try {
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: invoice.customer,
+      return_url: "https://www.risefurnishedstays.com/",
+    });
+    portalUrl = portalSession.url;
+  } catch (e) {
+    // If the Billing Portal isn't activated in the Stripe dashboard yet,
+    // this call fails -- log it clearly so it's obvious that's the fix
+    // needed (Stripe Dashboard > Settings > Billing > Customer portal),
+    // but don't block the guest email entirely; send it without the link.
+    console.error("Could not create Billing Portal session for", meta.confirmationCode, ":", e.message);
+  }
+
+  let booking = null;
+  try {
+    if (meta.confirmationCode) booking = await getBooking(meta.confirmationCode);
+  } catch (e) {
+    console.error("Could not look up booking for guest payment-failed email:", meta.confirmationCode, e.message);
+  }
+
+  if (invoice.customer_email || (booking && booking.guestEmail)) {
+    try {
+      await sendEmail({
+        to: invoice.customer_email || booking.guestEmail,
+        subject: `Action needed: payment issue with your stay - RISE Furnished Stays`,
+        replyTo: "risefurnishedstays@gmail.com",
+        html: paymentFailedGuestEmail({
+          guestName: booking ? booking.guestName : "",
+          unitCode: meta.unitCode,
+          confirmationCode: meta.confirmationCode || "(unknown)",
+          installmentDate: meta.installmentDate || "(unknown)",
+          amount: (invoice.amount_due / 100).toFixed(2),
+          updatePaymentUrl: portalUrl,
+        }),
+      });
+    } catch (e) {
+      console.error("Guest payment-failed email failed (non-fatal) for", meta.confirmationCode, e.message);
+    }
+  }
 }
