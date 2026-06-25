@@ -152,6 +152,7 @@ module.exports = async function handler(req, res) {
       refundAmount: outcome.refundAmount,
       refundId: refund ? refund.id : null,
       liabilityEndDate: outcome.liabilityEndDate, // null unless midstay
+      liableNights: outcome.liableNights || 0, // needed by charge-liability.js to invoice the right amount later
       voidedInvoiceIds,
     });
   } catch (e) {
