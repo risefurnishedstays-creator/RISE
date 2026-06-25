@@ -17,9 +17,9 @@
 // duplicate real emails to real guests.
 
 const { listAllConfirmedBookings, updateBookingStatus } = require("../../lib/bookings");
-const { key } = require("../../lib/pricing");
+const { key, addDays } = require("../../lib/pricing");
 const { sendEmail } = require("../../lib/sendEmail");
-const { checkinInstructionsEmail } = require("../../lib/emailTemplates");
+const { checkinInstructionsEmail, leaseReminderEmail, checkoutInstructionsEmail } = require("../../lib/emailTemplates");
 
 const ARRIVAL_HOUSE_RULES_REMINDER = [
   "Quiet hours are 11:00 PM - 7:00 AM.",
@@ -28,10 +28,12 @@ const ARRIVAL_HOUSE_RULES_REMINDER = [
   "Please don't flush anything but toilet paper -- guests are responsible for plumbing costs from clogs.",
 ];
 
+// Days to wait after booking before nagging about an unsigned lease, and
+// how many days CHECKOUT-instructions go out before the actual checkout date.
+const LEASE_REMINDER_START_DAYS = 1;
+const CHECKOUT_REMINDER_DAYS_BEFORE = 1;
+
 function isAuthorizedCronRequest(req) {
-  // Vercel automatically sends the CRON_SECRET value as the Authorization
-  // header when it invokes this endpoint -- see vercel.json. This also
-  // allows manual testing by calling with the same header yourself.
   const auth = req.headers["authorization"];
   return auth && process.env.CRON_SECRET && auth === `Bearer ${process.env.CRON_SECRET}`;
 }
@@ -42,7 +44,11 @@ module.exports = async function handler(req, res) {
   }
 
   const today = key(new Date());
-  const results = { checkinEmailsSent: [], arrivalRemindersSent: [], errors: [] };
+  const results = {
+    checkinEmailsSent: [], arrivalRemindersSent: [],
+    leaseRemindersSent: [], checkoutRemindersSent: [],
+    errors: [],
+  };
 
   let bookings;
   try {
@@ -99,6 +105,73 @@ module.exports = async function handler(req, res) {
       } catch (e) {
         console.error("arrival reminder email failed for", booking.confirmationCode, e.message);
         results.errors.push({ confirmationCode: booking.confirmationCode, step: "arrival", error: e.message });
+      }
+    }
+
+    // ---- Daily lease-signing reminder, until signed ----
+    // Sent once per day starting LEASE_REMINDER_START_DAYS after booking,
+    // for as long as leaseSignedAt remains null. leaseReminderLastSent
+    // (a date, not a boolean) is the idempotency guard here -- it lets the
+    // SAME booking receive a fresh reminder every day, while still
+    // guaranteeing at most one per calendar day even if this cron runs
+    // twice (the same protection pattern as checkinEmailSent elsewhere,
+    // just date-based instead of boolean since this repeats).
+    if (
+      !booking.leaseSignedAt &&
+      booking.status === "confirmed" &&
+      booking.leaseReminderLastSent !== today
+    ) {
+      const createdDate = booking.createdAt ? key(new Date(booking.createdAt)) : null;
+      const eligibleFrom = createdDate ? key(addDays(new Date(createdDate), LEASE_REMINDER_START_DAYS)) : today;
+      if (createdDate && today >= eligibleFrom) {
+        try {
+          await sendEmail({
+            to: booking.guestEmail,
+            subject: `Reminder: please sign your lease - RISE Furnished Stays`,
+            replyTo: "risefurnishedstays@gmail.com",
+            html: leaseReminderEmail({
+              guestName: booking.guestName,
+              unitCode: booking.unitCode,
+              confirmationCode: booking.confirmationCode,
+              // No real lease URL exists yet (BoldSign integration is not
+              // built) -- point to the contact page as a safe placeholder
+              // rather than a dead/fake link. Replace once BoldSign is wired up.
+              leaseUrl: "https://www.risefurnishedstays.com/contact.html",
+            }),
+          });
+          await updateBookingStatus(booking.confirmationCode, { leaseReminderLastSent: today });
+          results.leaseRemindersSent.push(booking.confirmationCode);
+        } catch (e) {
+          console.error("lease reminder email failed for", booking.confirmationCode, e.message);
+          results.errors.push({ confirmationCode: booking.confirmationCode, step: "lease-reminder", error: e.message });
+        }
+      }
+    }
+
+    // ---- Checkout instructions, sent shortly before checkout ----
+    if (
+      booking.checkOut &&
+      key(addDays(new Date(booking.checkOut), -CHECKOUT_REMINDER_DAYS_BEFORE)) === today &&
+      !booking.checkoutEmailSent &&
+      booking.status === "confirmed"
+    ) {
+      try {
+        await sendEmail({
+          to: booking.guestEmail,
+          subject: `Checkout details for your stay - RISE Furnished Stays`,
+          replyTo: "risefurnishedstays@gmail.com",
+          html: checkoutInstructionsEmail({
+            guestName: booking.guestName,
+            unitCode: booking.unitCode,
+            checkOut: booking.checkOut,
+            confirmationCode: booking.confirmationCode,
+          }),
+        });
+        await updateBookingStatus(booking.confirmationCode, { checkoutEmailSent: true });
+        results.checkoutRemindersSent.push(booking.confirmationCode);
+      } catch (e) {
+        console.error("checkout reminder email failed for", booking.confirmationCode, e.message);
+        results.errors.push({ confirmationCode: booking.confirmationCode, step: "checkout-reminder", error: e.message });
       }
     }
   }
