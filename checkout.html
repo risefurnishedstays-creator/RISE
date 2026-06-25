@@ -91,7 +91,7 @@
   .field label { display: block; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
   .field input { width: 100%; font-family: var(--font-body); font-size: 16px; color: var(--ink); border: 2.5px solid var(--line); border-radius: 9px; background: var(--paper); padding: 11px 13px; }
   .field input:focus { outline: none; border-color: var(--accent); }
-  .field input.invalid { border-color: var(--red); }
+  .field input.invalid, .field textarea.invalid { border-color: var(--red); }
   .field .err { color: var(--red); font-size: 12.5px; margin-top: 5px; display: none; }
   .field .err.show { display: block; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -277,8 +277,9 @@
           </div>
         </div>
         <div class="field">
-          <label for="guestComments">Comments (optional)</label>
-          <textarea id="guestComments" rows="4" placeholder="Write any additional questions or let us know about anything else you may need here."></textarea>
+          <label for="guestComments">Purpose of stay</label>
+          <textarea id="guestComments" rows="4" placeholder="Please describe the purpose of your stay."></textarea>
+          <div class="err" id="errComments">Please describe the purpose of your stay.</div>
         </div>
       </div>
 
@@ -301,7 +302,7 @@
         </div>
         <button class="btn accent block" id="payBtn" style="margin-top:18px;">Continue to payment →</button>
         <div class="pay-status" id="payStatus"></div>
-        <div class="bnote">No booking fees · Free cancellation if you cancel more than 30 days before check-in</div>
+        <div class="bnote">No booking fees · Full refund if cancelled more than 30 days before check-in · Cleaning/pet fees refunded even inside 30 days</div>
       </div>
     </div>
   </div>
@@ -555,16 +556,19 @@
     var email = emailEl.value.trim();
     var first = firstEl.value.trim();
     var last = lastEl.value.trim();
+    var comments = commentsEl.value.trim();
     var phoneDigits = phoneEl.value.replace(/\D/g, '');
     var emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     toggleErr('errEmail', emailEl, emailRe.test(email));
     toggleErr('errFirst', firstEl, !!first);
     toggleErr('errLast', lastEl, !!last);
     toggleErr('errPhone', phoneEl, phoneDigits.length === 10);
+    toggleErr('errComments', commentsEl, !!comments);
     if (!emailRe.test(email)) ok = false;
     if (!first) ok = false;
     if (!last) ok = false;
     if (phoneDigits.length !== 10) ok = false;
+    if (!comments) ok = false;
     return ok;
   }
   function toggleErr(errId, input, valid) {
