@@ -369,10 +369,33 @@
   const card = document.getElementById('formCard');
   const successMsg = document.getElementById('successMsg');
 
+  // Phone formatting matches checkout.html exactly: live (###) ###-#### as
+  // the guest types, capped at 10 digits, numeric keypad on mobile.
+  var phoneEl = document.getElementById('phone');
+  function formatPhone(v) {
+    var d = v.replace(/\D/g, '').slice(0, 10);
+    if (d.length === 0) return '';
+    if (d.length < 4) return '(' + d;
+    if (d.length < 7) return '(' + d.slice(0, 3) + ') ' + d.slice(3);
+    return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
+  }
+  if (phoneEl) {
+    phoneEl.setAttribute('maxlength', '14');
+    phoneEl.setAttribute('inputmode', 'numeric');
+    phoneEl.addEventListener('input', function () {
+      phoneEl.value = formatPhone(phoneEl.value);
+    });
+  }
+
   function flagInvalid() {
     let firstBad = null;
     form.querySelectorAll('[required]').forEach(el => {
-      const bad = !el.value.trim() || (el.type === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(el.value));
+      var bad = !el.value.trim() || (el.type === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(el.value));
+      // Same 10-digit completeness check as checkout.html's errPhone validation.
+      if (!bad && el === phoneEl) {
+        var phoneDigits = el.value.replace(/\D/g, '');
+        bad = phoneDigits.length !== 10;
+      }
       el.style.borderColor = bad ? 'oklch(0.55 0.18 25)' : '';
       el.style.boxShadow = bad ? '2px 2px 0 color-mix(in oklab, oklch(0.55 0.18 25) 30%, transparent)' : '';
       if (bad && !firstBad) firstBad = el;
