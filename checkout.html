@@ -277,7 +277,7 @@
           </div>
         </div>
         <div class="field">
-          <label for="guestComments">Purpose of stay</label>
+          <label for="guestComments">Comments</label>
           <textarea id="guestComments" rows="4" placeholder="Please describe the purpose of your stay."></textarea>
           <div class="err" id="errComments">Please describe the purpose of your stay.</div>
         </div>
@@ -302,7 +302,7 @@
         </div>
         <button class="btn accent block" id="payBtn" style="margin-top:18px;">Continue to payment →</button>
         <div class="pay-status" id="payStatus"></div>
-        <div class="bnote">No booking fees · Full refund if cancelled more than 30 days before check-in · Cleaning/pet fees refunded even inside 30 days</div>
+        <div class="bnote" id="bnote">No booking fees · Full refund if cancelled more than 30 days before check-in · Cleaning/pet fees refunded any time before check-in</div>
       </div>
     </div>
   </div>
@@ -383,6 +383,15 @@
       '<div class="sum-row"><span class="bk">Cleaning fee</span><span>' + money(p.cleaning) + '</span></div>' +
       (p.petFee > 0 ? '<div class="sum-row"><span class="bk">Pet fee · ' + p.pets + ' × ' + money(PET_FEE) + '</span><span>' + money(p.petFee) + '</span></div>' : '');
     gid('sumTotal').textContent = money(p.fullTotal);
+
+    // Cancellation cutoff dates depend on the guest's selected check-in date,
+    // so this is recomputed every time renderSummary() runs (i.e. whenever
+    // dates change), not set once at page load.
+    var fullRefundCutoff = addDays(checkIn, -31); // policy: refund applies if cancelled MORE than 30 days out
+    var feeRefundCutoff = addDays(checkIn, -1); // policy: fees refundable any time before check-in itself
+    gid('bnote').textContent =
+      'No booking fees · Full refund if cancelled by ' + fmtLong(fullRefundCutoff) + ' at 11:59 PM EST · ' +
+      'Cleaning/pet fees refunded if cancelled by ' + fmtLong(feeRefundCutoff) + ' at 11:59 PM EST';
 
     var dueInfo = 'Today you pay for the first 30 nights (' + money(p.first30) + ') plus the cleaning fee (' + money(p.cleaning) + ')' + (p.petFee > 0 ? ' and the pet fee (' + money(p.petFee) + ')' : '') + '. Remaining nights are charged on the scheduled dates below.';
     var payments = [{ label: 'Payment 1', badge: 'Due today', badgeCls: 'due', amount: p.dueToday, date: null }];
