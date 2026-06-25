@@ -322,20 +322,67 @@
         emailStatusHtml += '</div>';
       }
 
+      const liabilityButtonHtml = data.status === "cancelled-midstay"
+        ? '<button class="btn-danger" id="chargeLiabilityBtn" style="margin-top:12px;">Charge for liability period (' + money(currentOutcome.liabilityAmount) + ')</button>' +
+          '<p class="muted" style="margin-top:6px;">This sends the guest a Stripe invoice for ' + currentOutcome.liableNights + ' nights. Their card is NOT auto-charged -- they must pay via the link Stripe sends them.</p>'
+        : '';
+
       actionResult.innerHTML =
         '<div class="card">' +
         '<div class="banner ok">Done. Booking ' + data.confirmationCode + ' is now "' + data.status + '".</div>' +
         '<div class="field-row"><span class="k">Refund ID</span><span class="v">' + (data.refundId || "—") + '</span></div>' +
         '<div class="field-row"><span class="k">Invoices voided</span><span class="v">' + (data.voidedInvoiceIds.length ? data.voidedInvoiceIds.join(", ") : "—") + '</span></div>' +
         emailStatusHtml +
+        liabilityButtonHtml +
         '<p class="muted">Airbnb will unblock the dates on its next calendar sync (usually within a few hours) — this does not push instantly.</p>' +
         '</div>';
 
       document.getElementById("previewCard").classList.add("hidden");
+
+      if (data.status === "cancelled-midstay") {
+        document.getElementById("chargeLiabilityBtn").addEventListener("click", onChargeLiability);
+      }
     } catch (e) {
       actionResult.innerHTML = '<div class="card"><div class="banner danger">Network error: ' + e.message + '</div></div>';
       confirmBtn.disabled = false;
       confirmBtn.textContent = "Cancel & " + (currentOutcome.refundable ? "Refund" : "Process");
+    }
+  }
+
+  async function onChargeLiability() {
+    const btn = document.getElementById("chargeLiabilityBtn");
+    const sure = confirm(
+      "This will create a Stripe invoice for " + money(currentOutcome.liabilityAmount) +
+      " (" + currentOutcome.liableNights + " nights) and email it to the guest. " +
+      "Their saved card will NOT be auto-charged -- they must pay via the link. Continue?"
+    );
+    if (!sure) return;
+
+    btn.disabled = true;
+    btn.textContent = "Sending invoice…";
+
+    try {
+      const res = await fetch(API_BASE + "/api/charge-liability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+        body: JSON.stringify({ confirmationCode: currentConfCode }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        btn.insertAdjacentHTML("afterend", '<div class="banner danger" style="margin-top:10px;">Failed: ' + (data.error || "Unknown error") + '</div>');
+        btn.disabled = false;
+        btn.textContent = "Charge for liability period (" + money(currentOutcome.liabilityAmount) + ")";
+        return;
+      }
+
+      btn.outerHTML =
+        '<div class="banner ok">Invoice sent. ' + money(data.amount) + ' for ' + data.liableNights + ' nights.</div>' +
+        '<p class="muted"><a href="' + data.hostedInvoiceUrl + '" target="_blank" rel="noopener">View/share the hosted invoice link</a></p>';
+    } catch (e) {
+      btn.insertAdjacentHTML("afterend", '<div class="banner danger" style="margin-top:10px;">Network error: ' + e.message + '</div>');
+      btn.disabled = false;
+      btn.textContent = "Charge for liability period (" + money(currentOutcome.liabilityAmount) + ")";
     }
   }
 </script>
