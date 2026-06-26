@@ -19,7 +19,7 @@
 const { listAllConfirmedBookings, updateBookingStatus } = require("../../lib/bookings");
 const { key, addDays } = require("../../lib/pricing");
 const { sendEmail } = require("../../lib/sendEmail");
-const { checkinInstructionsEmail, leaseReminderEmail, checkoutInstructionsEmail } = require("../../lib/emailTemplates");
+const { checkinInstructionsEmail, leaseReminderEmail, checkoutInstructionsEmail, unitCheckinPdfAttachment } = require("../../lib/emailTemplates");
 
 const ARRIVAL_HOUSE_RULES_REMINDER = [
   "Quiet hours are 11:00 PM - 7:00 AM.",
@@ -66,10 +66,12 @@ module.exports = async function handler(req, res) {
       booking.status === "confirmed"
     ) {
       try {
+        const pdfAttachment = unitCheckinPdfAttachment(booking.unitCode);
         await sendEmail({
           to: booking.guestEmail,
           subject: `Check-in details for your stay - RISE Furnished Stays`,
           replyTo: "risefurnishedstays@gmail.com",
+          attachments: pdfAttachment ? [pdfAttachment] : undefined,
           html: checkinInstructionsEmail({
             guestName: booking.guestName,
             unitCode: booking.unitCode,
@@ -125,6 +127,11 @@ module.exports = async function handler(req, res) {
       const eligibleFrom = createdDate ? key(addDays(new Date(createdDate), LEASE_REMINDER_START_DAYS)) : today;
       if (createdDate && today >= eligibleFrom) {
         try {
+          // 3-day deadline counts from when the lease was originally sent
+          // (booking creation date), same anchor leaseAgreementEmail uses --
+          // not from today, so the stated deadline stays consistent across
+          // every reminder rather than appearing to push back each day.
+          const signByDate = key(addDays(new Date(createdDate), 3));
           await sendEmail({
             to: booking.guestEmail,
             subject: `Reminder: please sign your lease - RISE Furnished Stays`,
@@ -133,6 +140,7 @@ module.exports = async function handler(req, res) {
               guestName: booking.guestName,
               unitCode: booking.unitCode,
               confirmationCode: booking.confirmationCode,
+              signByDate,
               // No real lease URL exists yet (BoldSign integration is not
               // built) -- point to the contact page as a safe placeholder
               // rather than a dead/fake link. Replace once BoldSign is wired up.
