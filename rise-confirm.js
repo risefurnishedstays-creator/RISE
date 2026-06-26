@@ -94,9 +94,9 @@
     mount.innerHTML =
       '<div class="cf-card box">' +
         '<div class="cf-badge">✓</div>' +
-        '<div class="cf-kick">Booking confirmed</div>' +
-        '<h1>You’re all set' + (first ? ', ' + first : '') + '!</h1>' +
-        '<p class="cf-lede">Your stay at <b>' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</b> is reserved. A confirmation and self check-in details are on the way to <b>' + (rec.guestEmail || 'your email') + '</b>.</p>' +
+        '<div class="cf-kick">Payment successful</div>' +
+        '<h1>Payment received' + (first ? ', ' + first : '') + '!</h1>' +
+        '<p class="cf-lede">Your payment for <b>' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</b> went through, but your booking isn\'t complete yet — you\'ll need to sign your lease and send a photo ID before your stay is confirmed. A confirmation email with next steps is on the way to <b>' + (rec.guestEmail || 'your email') + '</b>.</p>' +
         '<div class="cf-code"><span class="cl">Confirmation code</span><span class="cv">' + rec.confirmationCode + '</span></div>' +
         '<div class="cf-recap">' +
           '<div class="rr"><span class="rk">Home</span><span class="rv">' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</span></div>' +
@@ -105,11 +105,12 @@
         '</div>' +
         sched +
         '<div class="cf-next">' +
-          '<div class="cf-next-head">What happens next</div>' +
+          '<div class="cf-next-head">Action needed to complete your booking</div>' +
           '<ul>' +
+            '<li><b>Sign your lease</b> — we\'ll email it shortly. Your booking isn\'t finalized until this is signed.</li>' +
+            '<li><b>Send a photo ID</b> to risefurnishedstays@gmail.com for verification.</li>' +
             '<li>A confirmation email with your full payment breakdown and receipt is on its way.</li>' +
             '<li>We’ll send the exact address and check-in details closer to your arrival.</li>' +
-            '<li>You’ll receive a separate email with the lease agreement to review and sign.</li>' +
             '<li>Questions before then? Reach out via our <a href="contact.html" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">contact page</a> or at risefurnishedstays@gmail.com.</li>' +
           '</ul>' +
         '</div>' +
