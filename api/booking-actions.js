@@ -18,9 +18,11 @@ const { cancellationOutcome, checkinEmailTiming, CONFIG } = require("../lib/pric
 const { sendEmail } = require("../lib/sendEmail");
 const {
   cancellationGuestEmail,
+  lateCancellationGuestEmail,
   cancellationOwnerEmail,
   liabilityInvoiceOwnerEmail,
   checkinInstructionsEmail,
+  unitCheckinPdfAttachment,
 } = require("../lib/emailTemplates");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -187,16 +189,25 @@ async function handleCancel(req, res) {
   let ownerEmailError = null;
 
   try {
+    const guestEmailHtml = outcome.branch === "non-refundable"
+      ? lateCancellationGuestEmail({
+          guestName: booking.guestName,
+          unitCode: booking.unitCode,
+          checkIn: booking.checkIn,
+          confirmationCode,
+          outcome,
+        })
+      : cancellationGuestEmail({
+          guestName: booking.guestName,
+          unitCode: booking.unitCode,
+          confirmationCode,
+          outcome,
+        });
     await sendEmail({
       to: booking.guestEmail,
       subject: `Cancellation Confirmed — RISE Furnished Stays`,
       replyTo: "risefurnishedstays@gmail.com",
-      html: cancellationGuestEmail({
-        guestName: booking.guestName,
-        unitCode: booking.unitCode,
-        confirmationCode,
-        outcome,
-      }),
+      html: guestEmailHtml,
     });
   } catch (e) {
     guestEmailError = e.message;
@@ -356,10 +367,12 @@ async function handleMarkLeaseSigned(req, res) {
 
   if (timing.sendNow) {
     try {
+      const pdfAttachment = unitCheckinPdfAttachment(booking.unitCode);
       await sendEmail({
         to: booking.guestEmail,
         subject: `Check-in details for your stay - RISE Furnished Stays`,
         replyTo: "risefurnishedstays@gmail.com",
+        attachments: pdfAttachment ? [pdfAttachment] : undefined,
         html: checkinInstructionsEmail({
           guestName: booking.guestName,
           unitCode: booking.unitCode,

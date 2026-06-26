@@ -17,6 +17,7 @@
 const Stripe = require("stripe");
 const { sendEmail } = require("../lib/sendEmail");
 const { saveBooking, getBooking } = require("../lib/bookings");
+const { priceParts } = require("../lib/pricing");
 const {
   guestConfirmationEmail,
   ownerNotificationEmail,
@@ -73,8 +74,26 @@ async function handleCheckoutCompleted(session) {
   const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
   const paymentMethodId = paymentIntent.payment_method;
 
+  // The full installment schedule is recomputed HERE rather than trusted
+  // from meta.paymentSchedule. Stripe metadata values are capped at 500
+  // characters -- for longer stays (4+ installments), the JSON-stringified
+  // schedule array silently exceeds that limit and gets truncated by
+  // Stripe, which is what caused confirmation emails to show only the
+  // first 1-2 installments instead of the full list for long bookings.
+  // priceParts() is a pure function of checkIn/checkOut/pets (all of which
+  // ARE safely within metadata limits as plain strings), so recomputing it
+  // here reproduces the exact same schedule with no size limit at all.
+  const petsCount = meta.pets ? parseInt(meta.pets, 10) || 0 : 0;
   let schedule = [];
-  try { schedule = JSON.parse(meta.paymentSchedule || "[]"); } catch (_) { schedule = []; }
+  try {
+    const recomputed = priceParts(meta.checkIn, meta.checkOut, petsCount);
+    schedule = (recomputed.paymentDates || []).map((p) => ({ date: p.dateStr, amount: p.amount, nights: p.nights }));
+  } catch (e) {
+    console.error("Could not recompute payment schedule for", confirmationCode, e.message);
+    // Fall back to the (possibly truncated) metadata value rather than
+    // showing nothing, in the unlikely event recomputation itself fails.
+    try { schedule = JSON.parse(meta.paymentSchedule || "[]"); } catch (_) { schedule = []; }
+  }
 
   // ---- Create a reusable Customer with the saved card as default ----
   // (Moved above saveBooking so we have customerId in hand to store on the
