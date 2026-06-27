@@ -15,6 +15,8 @@
 // API call is needed here -- this only touches Redis.
 
 const { getBooking } = require("../lib/bookings");
+const { priceParts } = require("../lib/pricing");
+const { buildLeaseText, buildPetAddendumText } = require("../lib/leaseTemplate");
 
 module.exports = async function handler(req, res) {
   // This endpoint is called cross-origin: confirmation.html is served from
@@ -51,5 +53,31 @@ module.exports = async function handler(req, res) {
     return res.status(404).json({ error: "Booking not found yet." });
   }
 
-  return res.status(200).json({ booking });
+  // Optional: ?include=leaseText returns the exact lease/addendum text
+  // lease.html displays before signing -- generated from the same
+  // lib/leaseTemplate.js functions sign-lease.js uses to build the final
+  // PDF, so what the guest reads on-screen always matches what gets
+  // signed and archived. Folded into this existing endpoint rather than
+  // creating a separate one, to stay under Vercel's Hobby function limit.
+  let leaseText, petAddendumText;
+  if ((req.query.include || "").toString() === "leaseText") {
+    try {
+      const pets = typeof booking.pets === "number" ? booking.pets : 0;
+      const pricing = priceParts(booking.checkIn, booking.checkOut, pets);
+      leaseText = buildLeaseText({
+        guestName: booking.guestName,
+        unitCode: booking.unitCode,
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        fullTotal: pricing.fullTotal,
+        dueToday: pricing.dueToday,
+        paymentDates: pricing.paymentDates,
+      });
+      petAddendumText = buildPetAddendumText({ pets, petFeeTotal: pricing.petFee });
+    } catch (e) {
+      console.error("Could not build lease text for", confirmationCode, e.message);
+    }
+  }
+
+  return res.status(200).json({ booking, leaseText, petAddendumText });
 };
