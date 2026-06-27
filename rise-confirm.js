@@ -95,8 +95,8 @@
       '<div class="cf-card box">' +
         '<div class="cf-badge">✓</div>' +
         '<div class="cf-kick">Payment successful</div>' +
-        '<h1>Sign your lease to finish booking' + (first ? ', ' + first : '') + '</h1>' +
-        '<p class="cf-lede">Your payment for <b>' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</b> went through, but your booking isn\'t complete yet — you\'ll need to sign your lease and send a photo ID before your stay is confirmed. A confirmation email with next steps is on the way to <b>' + (rec.guestEmail || 'your email') + '</b>.</p>' +
+        '<h1>Send your ID to finish booking' + (first ? ', ' + first : '') + '</h1>' +
+        '<p class="cf-lede">Your payment for <b>' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</b> went through, and your lease is signed. Your booking isn\'t complete yet — you\'ll need to send a photo ID before your stay is confirmed. A confirmation email with next steps is on the way to <b>' + (rec.guestEmail || 'your email') + '</b>.</p>' +
         '<div class="cf-code"><span class="cl">Confirmation code</span><span class="cv">' + rec.confirmationCode + '</span></div>' +
         '<div class="cf-recap">' +
           '<div class="rr"><span class="rk">Home</span><span class="rv">' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</span></div>' +
@@ -107,7 +107,6 @@
         '<div class="cf-next">' +
           '<div class="cf-next-head">Action needed to complete your booking</div>' +
           '<ul>' +
-            '<li><b>Sign your lease</b> — we\'ll email it shortly. Your booking isn\'t finalized until this is signed.</li>' +
             '<li><b>Send a photo ID</b> to risefurnishedstays@gmail.com for verification.</li>' +
             '<li>A confirmation email with your full payment breakdown and receipt is on its way.</li>' +
             '<li>We’ll send the exact address and check-in details closer to your arrival.</li>' +

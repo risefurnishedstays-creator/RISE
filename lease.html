@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<title>RISE Furnished Stays — Sign Your Lease</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --font-head: 'Libre Baskerville', Georgia, serif;
+    --font-body: 'Work Sans', system-ui, sans-serif;
+    --ink: #2b2926; --ink-soft: #6f6a63; --paper: #f4f1ea; --paper-2: #ece7dc;
+    --line: #2b2926; --accent: #cc7044; --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+    --red: #b3261e; --red-soft: color-mix(in oklab, var(--red) 14%, transparent);
+    --radius-sketch: 255px 12px 225px 14px / 14px 225px 14px 255px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-size: 17px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column;
+  }
+  h1, h2, h3 { font-family: var(--font-head); font-weight: 700; line-height: 1.1; margin: 0; }
+  .wrap { max-width: 800px; margin: 0 auto; padding: 0 24px; width: 100%; }
+  .box { border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: #fff; }
+  .btn {
+    font-family: var(--font-body); font-weight: 700; font-size: 16px;
+    border: 2.5px solid var(--line); border-radius: var(--radius-sketch);
+    background: var(--paper); color: var(--ink); padding: 13px 22px; cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink); transition: transform .08s, box-shadow .08s;
+  }
+  .btn:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active:not(:disabled) { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn.accent { background: var(--accent); color: #fff; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+  .btn.block { display: block; width: 100%; text-align: center; }
+  .btn.small { padding: 8px 14px; font-size: 14px; box-shadow: 2px 2px 0 var(--ink); }
+
+  header.nav { padding: 22px 0; border-bottom: 2.5px solid var(--line); background: var(--paper); }
+  header.nav .wrap { display: flex; align-items: center; }
+  .logo-img { height: 48px; width: auto; display: block; }
+
+  main { flex: 1 0 auto; padding: 44px 0 80px; }
+
+  .lc-kick { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
+  .lc-title { font-size: clamp(26px, 4vw, 36px); margin-bottom: 8px; }
+  .lc-sub { color: var(--ink-soft); font-size: 15.5px; margin-bottom: 28px; max-width: 56ch; }
+
+  .lease-scroll {
+    max-height: 480px; overflow-y: auto; padding: 26px 28px; margin-bottom: 22px;
+    font-size: 14.5px; line-height: 1.65; white-space: pre-wrap;
+  }
+  .scroll-hint { text-align: center; font-size: 13px; color: var(--ink-soft); margin: -10px 0 22px; }
+  .scroll-hint.done { color: #1e6b3c; }
+
+  .sig-box { padding: 24px 28px; margin-bottom: 22px; }
+  .sig-box h3 { font-size: 18px; margin-bottom: 4px; }
+  .sig-box p.hint { color: var(--ink-soft); font-size: 13.5px; margin: 0 0 14px; }
+  canvas#sigPad {
+    width: 100%; height: 160px; border: 2px dashed color-mix(in oklab, var(--ink) 30%, transparent);
+    border-radius: 10px; background: var(--paper); touch-action: none; cursor: crosshair; display: block;
+  }
+  .sig-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .sig-name-line { font-size: 13px; color: var(--ink-soft); }
+
+  .agree-row { display: flex; align-items: flex-start; gap: 10px; margin: 18px 0; font-size: 14.5px; }
+  .agree-row input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+
+  .id-note { background: var(--accent-soft); border: 2px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 22px; font-size: 14.5px; line-height: 1.55; }
+
+  .err-banner { background: var(--red-soft); border: 2px solid var(--red); color: var(--red); border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 18px; display: none; }
+  .err-banner.show { display: block; }
+
+  .loading-state, .success-state { text-align: center; padding: 70px 24px; }
+  .loading-state p, .success-state p { color: var(--ink-soft); }
+  .success-badge { width: 64px; height: 64px; margin: 0 auto 18px; border: 2.5px solid var(--line); border-radius: 50%; background: #eaf6ee; color: #1e6b3c; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 3px 3px 0 var(--ink); }
+
+  footer.foot { background: var(--ink); color: var(--paper); padding: 26px 0; text-align: center; font-size: 13px; }
+  footer.foot a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a href="index.html"><img class="logo-img" src="assets/rise-logo.png" alt="RISE Furnished Stays" /></a>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div id="leaseMount">
+      <div class="loading-state">
+        <p>Loading your lease...</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">Questions? Reach out at <a href="mailto:risefurnishedstays@gmail.com">risefurnishedstays@gmail.com</a></div>
+</footer>
+
+<script>
+(function () {
+  var mount = document.getElementById('leaseMount');
+  if (!mount) return;
+
+  var API_BASE = 'https://rise-eta-three.vercel.app';
+
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get('session_id');
+
+  if (!sessionId) {
+    renderError('No booking session found. If you just completed checkout, check your email for confirmation.');
+    return;
+  }
+
+  function renderError(msg) {
+    mount.innerHTML =
+      '<div class="loading-state"><p style="color:var(--red);">' + msg + '</p>' +
+      '<a class="btn accent" href="index.html#book-stay">Browse homes &amp; dates</a></div>';
+  }
+
+  function fetchBooking(attempt) {
+    attempt = attempt || 1;
+    fetch(API_BASE + '/api/booking-by-session?session_id=' + encodeURIComponent(sessionId))
+      .then(function (res) {
+        if (res.status === 404 && attempt < 5) {
+          setTimeout(function () { fetchBooking(attempt + 1); }, 1200);
+          return null;
+        }
+        return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+      })
+      .then(function (result) {
+        if (!result) return;
+        if (!result.ok || !result.data || !result.data.booking) {
+          renderError('We could not find your booking yet. It may take a few seconds to appear -- try refreshing this page shortly.');
+          return;
+        }
+        renderLease(result.data.booking);
+      })
+      .catch(function () { renderError('Something went wrong loading your booking. Please refresh, or contact us if this persists.'); });
+  }
+
+  var UNIT_NAMES = { A: 'Cozy Home in South Austin', B: 'Entire Home in South Austin', D: 'Private Home in South Austin' };
+
+  function escapeHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  function renderLease(booking) {
+    if (booking.leaseSignedAt) {
+      window.location.href = 'confirmation.html?session_id=' + encodeURIComponent(sessionId);
+      return;
+    }
+
+    var unitName = UNIT_NAMES[booking.unitCode] || ('Unit ' + booking.unitCode);
+    var hasPets = booking.pets && booking.pets > 0;
+
+    mount.innerHTML =
+      '<div class="lc-kick">Last step</div>' +
+      '<h1 class="lc-title">Review &amp; sign your lease</h1>' +
+      '<p class="lc-sub">Your payment for <b>' + unitName + '</b> is confirmed. Please review the lease' + (hasPets ? ' and pet addendum' : '') + ' below and sign to finish booking.</p>' +
+      '<div class="box lease-scroll" id="leaseScroll"></div>' +
+      '<p class="scroll-hint" id="scrollHint">Scroll to the bottom to continue</p>' +
+      '<div class="box sig-box">' +
+        '<h3>Tenant signature</h3>' +
+        '<p class="hint">Draw your signature below using your mouse or finger.</p>' +
+        '<canvas id="sigPad"></canvas>' +
+        '<div class="sig-row">' +
+          '<span class="sig-name-line">Signing as: <b>' + escapeHtml(booking.guestName || 'Guest') + '</b></span>' +
+          '<button class="btn small" id="clearSigBtn" type="button">Clear</button>' +
+        '</div>' +
+      '</div>' +
+      '<label class="agree-row"><input type="checkbox" id="agreeCheck" /> I have read and agree to the lease' + (hasPets ? ' and pet addendum' : '') + ' above, and I am signing electronically as a legally binding signature.</label>' +
+      '<div class="id-note"><b>One more thing:</b> please email a photo of the front and back of your government-issued ID to <a href="mailto:risefurnishedstays@gmail.com" style="color:var(--accent); font-weight:700;">risefurnishedstays@gmail.com</a> for verification. This is required to complete your booking.</div>' +
+      '<div class="err-banner" id="signErr"></div>' +
+      '<button class="btn accent block" id="submitBtn" disabled>Sign lease &amp; continue</button>';
+
+    renderLeaseScrollContent(booking);
+    setUpScrollGate();
+    setUpSignaturePad();
+    setUpSubmit(booking, sessionId);
+  }
+
+  function renderLeaseScrollContent(booking) {
+    var el = document.getElementById('leaseScroll');
+    fetch(API_BASE + '/api/booking-by-session?session_id=' + encodeURIComponent(sessionId) + '&include=leaseText')
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        el.textContent = (data.leaseText || '') + (data.petAddendumText ? '\n\n\n' + data.petAddendumText : '');
+      })
+      .catch(function () {
+        el.textContent = 'We could not load the full lease text. Please refresh, or contact risefurnishedstays@gmail.com before signing.';
+      });
+  }
+
+  var scrolledToBottom = false;
+
+  function setUpScrollGate() {
+    var scrollEl = document.getElementById('leaseScroll');
+    var hint = document.getElementById('scrollHint');
+
+    scrollEl.addEventListener('scroll', function () {
+      var atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 20;
+      if (atBottom && !scrolledToBottom) {
+        scrolledToBottom = true;
+        hint.textContent = 'You have reached the end of the lease.';
+        hint.classList.add('done');
+        updateSubmitState();
+      }
+    });
+  }
+
+  var sigCtx, sigHasContent = false;
+
+  function setUpSignaturePad() {
+    var canvas = document.getElementById('sigPad');
+    var ratio = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * ratio;
+    canvas.height = canvas.clientHeight * ratio;
+    sigCtx = canvas.getContext('2d');
+    sigCtx.scale(ratio, ratio);
+    sigCtx.lineWidth = 2.4;
+    sigCtx.lineCap = 'round';
+    sigCtx.strokeStyle = '#2b2926';
+
+    var drawing = false, lastX, lastY;
+
+    function pos(e) {
+      var rect = canvas.getBoundingClientRect();
+      var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+    function start(e) { drawing = true; var p = pos(e); lastX = p.x; lastY = p.y; e.preventDefault(); }
+    function move(e) {
+      if (!drawing) return;
+      var p = pos(e);
+      sigCtx.beginPath(); sigCtx.moveTo(lastX, lastY); sigCtx.lineTo(p.x, p.y); sigCtx.stroke();
+      lastX = p.x; lastY = p.y;
+      sigHasContent = true;
+      updateSubmitState();
+      e.preventDefault();
+    }
+    function end() { drawing = false; }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    canvas.addEventListener('mouseup', end);
+    canvas.addEventListener('mouseleave', end);
+    canvas.addEventListener('touchstart', start, { passive: false });
+    canvas.addEventListener('touchmove', move, { passive: false });
+    canvas.addEventListener('touchend', end);
+
+    document.getElementById('clearSigBtn').addEventListener('click', function () {
+      sigCtx.clearRect(0, 0, canvas.width, canvas.height);
+      sigHasContent = false;
+      updateSubmitState();
+    });
+
+    document.getElementById('agreeCheck').addEventListener('change', updateSubmitState);
+  }
+
+  function updateSubmitState() {
+    var submitBtn = document.getElementById('submitBtn');
+    var agreed = document.getElementById('agreeCheck').checked;
+    submitBtn.disabled = !(agreed && scrolledToBottom && sigHasContent);
+  }
+
+  function setUpSubmit(booking, sessionId) {
+    document.getElementById('submitBtn').addEventListener('click', function () {
+      var btn = this;
+      var errEl = document.getElementById('signErr');
+      errEl.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      var canvas = document.getElementById('sigPad');
+      var signatureImageBase64 = canvas.toDataURL('image/png');
+
+      fetch(API_BASE + '/api/sign-lease', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmationCode: booking.confirmationCode, signatureImageBase64: signatureImageBase64 }),
+      })
+        .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (result) {
+          if (!result.ok) {
+            errEl.textContent = result.data.error || 'Something went wrong submitting your signature. Please try again.';
+            errEl.classList.add('show');
+            btn.disabled = false;
+            btn.textContent = 'Sign lease & continue';
+            return;
+          }
+          renderSuccess(sessionId);
+        })
+        .catch(function () {
+          errEl.textContent = 'Network error -- please check your connection and try again.';
+          errEl.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = 'Sign lease & continue';
+        });
+    });
+  }
+
+  function renderSuccess(sessionId) {
+    mount.innerHTML =
+      '<div class="success-state">' +
+        '<div class="success-badge">&#10003;</div>' +
+        '<h2>Lease signed!</h2>' +
+        '<p>Thanks -- your lease is complete. Don\'t forget to email a photo of your ID to <a href="mailto:risefurnishedstays@gmail.com" style="color:var(--accent);">risefurnishedstays@gmail.com</a> if you have not already.</p>' +
+        '<a class="btn accent" href="confirmation.html?session_id=' + encodeURIComponent(sessionId) + '">Continue to confirmation &rarr;</a>' +
+      '</div>';
+  }
+
+  fetchBooking();
+})();
+</script>
+</body>
+</html>
