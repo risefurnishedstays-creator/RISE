@@ -107,7 +107,7 @@ module.exports = async function handler(req, res) {
           price.paymentDates.map((p) => ({ date: p.dateStr, amount: p.amount, nights: p.nights }))
         ),
       },
-      success_url: `${siteUrl}/confirmation.html?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${siteUrl}/lease.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/unit-${unitCode.toLowerCase()}.html?canceled=true`,
     });
 
