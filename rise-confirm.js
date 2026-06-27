@@ -95,7 +95,7 @@
       '<div class="cf-card box">' +
         '<div class="cf-badge">✓</div>' +
         '<div class="cf-kick">Payment successful</div>' +
-        '<h1>Payment received' + (first ? ', ' + first : '') + '!</h1>' +
+        '<h1>Sign your lease to finish booking' + (first ? ', ' + first : '') + '</h1>' +
         '<p class="cf-lede">Your payment for <b>' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</b> went through, but your booking isn\'t complete yet — you\'ll need to sign your lease and send a photo ID before your stay is confirmed. A confirmation email with next steps is on the way to <b>' + (rec.guestEmail || 'your email') + '</b>.</p>' +
         '<div class="cf-code"><span class="cl">Confirmation code</span><span class="cv">' + rec.confirmationCode + '</span></div>' +
         '<div class="cf-recap">' +
