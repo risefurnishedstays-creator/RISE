@@ -18,11 +18,14 @@ const Stripe = require("stripe");
 const { sendEmail } = require("../lib/sendEmail");
 const { saveBooking, getBooking } = require("../lib/bookings");
 const { priceParts } = require("../lib/pricing");
+const { sendLeaseForSignature, isConfigured: boldsignConfigured } = require("../lib/boldsign");
 const {
   guestConfirmationEmail,
   ownerNotificationEmail,
   paymentFailedOwnerEmail,
   paymentFailedGuestEmail,
+  unitAddress,
+  unitDisplayName,
 } = require("../lib/emailTemplates");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -214,6 +217,53 @@ async function handleCheckoutCompleted(session) {
       confirmationCode,
     }),
   });
+
+  // ---- Send the lease for signature via BoldSign ----
+  // This replaces the old leaseAgreementEmail() template, which was never
+  // actually wired to any trigger -- BoldSign now sends the real lease
+  // (pre-filled with this booking's data) and emails the guest directly
+  // on our behalf. When the guest (and you, if you're also a signing
+  // role) completes signing, BoldSign's webhook (api/boldsign-webhook.js)
+  // picks up from there and schedules/sends check-in instructions.
+  //
+  // A BoldSign failure here is logged loudly but does NOT fail the
+  // webhook -- payment and booking already succeeded by this point, and
+  // failing the whole webhook would make Stripe retry a charge that
+  // already went through. If this fails, the lease needs to be sent
+  // manually until the underlying issue (e.g. missing API key, wrong
+  // template/field IDs) is fixed.
+  if (boldsignConfigured()) {
+    try {
+      const pricing = priceParts(meta.checkIn, meta.checkOut, petsCount);
+      await sendLeaseForSignature(
+        {
+          guestName: meta.guestName || "Guest",
+          guestEmail: meta.guestEmail || session.customer_email,
+          unitCode: meta.unitCode,
+          checkIn: meta.checkIn,
+          checkOut: meta.checkOut,
+          confirmationCode,
+        },
+        {
+          monthlyRent: `$${pricing.first30}`,
+          cleaningFee: `$${pricing.cleaning}`,
+          petFee: `$${pricing.petFee}`,
+        },
+        meta.unitName || unitDisplayName(meta.unitCode),
+        unitAddress(meta.unitCode)
+      );
+    } catch (e) {
+      console.error(
+        "CRITICAL: BoldSign lease send failed for", confirmationCode, ":", e.message,
+        "-- the lease must be sent to the guest manually until this is resolved."
+      );
+    }
+  } else {
+    console.error(
+      "BoldSign is not configured (missing BOLDSIGN_API_KEY/BOLDSIGN_TEMPLATE_ID) -- " +
+      "lease was NOT sent for", confirmationCode, ". Send it manually for now."
+    );
+  }
 }
 
 async function handleInvoiceFailed(invoice) {
