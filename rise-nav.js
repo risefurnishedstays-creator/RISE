@@ -271,7 +271,7 @@
     { key: 'book', label: 'Book' },
     { key: 'pay', label: 'Pay' },
     { key: 'sign', label: 'Sign Lease' },
-    { key: 'confirm', label: 'Confirmation & Send ID' }
+    { key: 'confirm', label: 'Send ID and Complete Booking' }
   ];
 
   // Map each flow page to the step key(s) that are "current" on that page.
@@ -300,17 +300,21 @@
     if (i > lastActiveIdx) lastActiveIdx = i;
   });
 
+  // Sketch-style treatment to match the rest of the site: solid border,
+  // hard offset shadow on the current step, body font at a size that's
+  // actually readable rather than the small monospace-eyebrow look this
+  // started with.
   var css = '\n'
-    + '.rise-stepstrip { position: sticky; top: 0; z-index: 49; background: var(--paper-2); border-bottom: 2px solid var(--line); padding: 10px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }\n'
-    + '.rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 2px; max-width: 1120px; margin: 0 auto; padding: 0 18px; font-family: ui-monospace, \'SF Mono\', Menlo, monospace; font-size: 11px; letter-spacing: .04em; white-space: nowrap; min-width: max-content; }\n'
-    + '.rise-step { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 7px; color: var(--ink-soft); }\n'
-    + '.rise-step .num { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 1.5px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-size: 9.5px; }\n'
+    + '.rise-stepstrip { position: sticky; top: 0; z-index: 49; background: var(--paper-2); border-bottom: 2.5px solid var(--line); padding: 14px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }\n'
+    + '.rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 1120px; margin: 0 auto; padding: 0 18px; font-family: var(--font-body); font-size: 18px; white-space: nowrap; min-width: max-content; }\n'
+    + '.rise-step { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: var(--radius-sketch); color: var(--ink-soft); border: 2px solid transparent; font-weight: 500; }\n'
+    + '.rise-step .num { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-family: ui-monospace, \'SF Mono\', Menlo, monospace; font-size: 12px; }\n'
     + '.rise-step.done { color: var(--ink); }\n'
     + '.rise-step.done .num { background: var(--ink); border-color: var(--ink); color: var(--paper); }\n'
-    + '.rise-step.current { color: #fff; background: var(--accent); font-weight: 700; }\n'
+    + '.rise-step.current { color: #fff; background: var(--accent); border-color: var(--line); font-weight: 700; box-shadow: 3px 3px 0 var(--ink); }\n'
     + '.rise-step.current .num { border-color: #fff; }\n'
-    + '.rise-step-sep { color: var(--ink-soft); opacity: .45; padding: 0 1px; }\n'
-    + '@media (max-width: 640px) { .rise-stepstrip-inner { font-size: 10px; justify-content: flex-start; } .rise-step { padding: 5px 7px; } }\n';
+    + '.rise-step-sep { color: var(--ink-soft); opacity: .5; font-size: 20px; }\n'
+    + '@media (max-width: 640px) { .rise-stepstrip-inner { font-size: 16px; justify-content: flex-start; } .rise-step { padding: 7px 11px; } }\n';
 
   var style = document.createElement('style');
   style.textContent = css;

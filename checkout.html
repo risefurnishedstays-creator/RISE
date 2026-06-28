@@ -525,7 +525,10 @@
     }
     calMsg = '';
     pickMode = (mode === 'out' && tmpIn) ? 'out' : 'in';
-    var base = (pickMode === 'out' && tmpIn) ? tmpIn : (tmpIn || firstOpen());
+    // Default to the CURRENT month whenever nothing is picked yet -- regardless
+    // of whether today (or this month) happens to be booked out. Only fall
+    // back to the already-picked check-in date once something is selected.
+    var base = (pickMode === 'out' && tmpIn) ? tmpIn : (tmpIn || today);
     calRef = new Date(base.getFullYear(), base.getMonth(), 1);
     calOpen = true;
     var pop = gid('calPop'); if (!pop) return;

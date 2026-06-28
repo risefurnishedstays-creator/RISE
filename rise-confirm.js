@@ -23,12 +23,12 @@
   var css = `
   .cf-card { max-width: 640px; margin: 0 auto; padding: 40px 40px 36px; box-shadow: 6px 7px 0 var(--ink); text-align: center; }
   .cf-badge { width: 72px; height: 72px; margin: 0 auto 20px; border: 2.5px solid var(--line); border-radius: 50%; background: var(--green-soft); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 36px; box-shadow: 3px 3px 0 var(--ink); }
-  .cf-kick { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .cf-kick { font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
   .cf-card h1 { font-size: clamp(30px, 4vw, 42px); line-height: 1.04; margin-bottom: 14px; }
   .cf-lede { color: var(--ink-soft); font-size: 16px; line-height: 1.6; margin: 0 auto 24px; max-width: 46ch; }
   .cf-lede b { color: var(--ink); }
   .cf-code { display: inline-flex; flex-direction: column; gap: 4px; align-items: center; font-family: ui-monospace, monospace; border: 2.5px solid var(--line); border-radius: 12px; padding: 12px 24px; margin-bottom: 28px; background: var(--accent-soft); box-shadow: 3px 3px 0 var(--ink); }
-  .cf-code .cl { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+  .cf-code .cl { font-size: 18px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
   .cf-code .cv { font-size: 19px; font-weight: 700; letter-spacing: .14em; }
 
   .cf-recap { text-align: left; border: 2.5px solid var(--line); border-radius: 14px; padding: 6px 22px 16px; margin-bottom: 28px; }
@@ -39,12 +39,12 @@
   .cf-recap .rr.total .rv, .cf-recap .rr.total .rk { font-weight: 700; font-size: 16px; }
 
   .cf-sched { text-align: left; margin-bottom: 28px; }
-  .cf-sched-head { font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 10px; }
+  .cf-sched-head { font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 10px; }
   .cf-sched .sr { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 13.5px; padding: 6px 0; color: var(--ink-soft); }
   .cf-sched .sr.due { color: var(--ink); font-weight: 700; }
 
   .cf-next { text-align: left; background: var(--accent-soft); border: 2.5px solid var(--line); border-radius: 14px; box-shadow: 4px 4px 0 var(--ink); padding: 20px 24px; margin-bottom: 28px; }
-  .cf-next-head { font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+  .cf-next-head { font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
   .cf-next ul { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
   .cf-next li { position: relative; padding-left: 26px; font-size: 14.5px; line-height: 1.5; }
   .cf-next li::before { content: "→"; position: absolute; left: 0; top: 0; color: var(--accent); font-weight: 700; }
