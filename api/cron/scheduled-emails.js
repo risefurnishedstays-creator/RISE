@@ -1,12 +1,21 @@
 // api/cron/scheduled-emails.js
 //
-// Runs once per day (configured in vercel.json) and sends two kinds of
+// Runs once per day (configured in vercel.json) and sends several kinds of
 // calendar-based emails:
 //   1. Check-in instructions, for bookings whose checkinEmailScheduledFor
-//      date is today (set by mark-lease-signed.js when the lease was
-//      signed more than 7 days before check-in).
+//      date is today (set by sign-lease.js when the lease was signed more
+//      than 7 days before check-in).
 //   2. Arrival reminders, for bookings whose check-in date is TODAY --
 //      a short note hitting the most important house rules.
+//   3. Daily lease-signing reminders, for the first LEASE_DEADLINE_DAYS
+//      after booking, until the lease is signed. Once that window passes
+//      with no signature, instead of continuing to nag the guest forever,
+//      a one-time alert goes to the owner for manual review (no automatic
+//      cancellation/refund is taken).
+//   4. Weekly ID-upload reminders, for as long as the lease is signed but
+//      the ID isn't uploaded -- plus one urgent reminder the day before
+//      check-in if it's still missing by then.
+//   5. Checkout instructions, sent shortly before the checkout date.
 //
 // IMPORTANT -- idempotency: Vercel cron delivery can occasionally invoke
 // the same scheduled run more than once in a day. Each booking has a
@@ -19,7 +28,7 @@
 const { listAllConfirmedBookings, updateBookingStatus } = require("../../lib/bookings");
 const { key, addDays } = require("../../lib/pricing");
 const { sendEmail } = require("../../lib/sendEmail");
-const { checkinInstructionsEmail, leaseReminderEmail, checkoutInstructionsEmail, unitCheckinPdfAttachment } = require("../../lib/emailTemplates");
+const { checkinInstructionsEmail, leaseReminderEmail, idUploadReminderEmail, ownerLeaseOverdueAlertEmail, checkoutInstructionsEmail, unitCheckinPdfAttachment } = require("../../lib/emailTemplates");
 
 const ARRIVAL_HOUSE_RULES_REMINDER = [
   "Quiet hours are 11:00 PM - 7:00 AM.",
@@ -28,9 +37,13 @@ const ARRIVAL_HOUSE_RULES_REMINDER = [
   "Please don't flush anything but toilet paper -- guests are responsible for plumbing costs from clogs.",
 ];
 
-// Days to wait after booking before nagging about an unsigned lease, and
-// how many days CHECKOUT-instructions go out before the actual checkout date.
+// Days to wait after booking before nagging about an unsigned lease, the
+// hard deadline at which the daily nag stops and an owner alert fires
+// instead, how often to nudge about a missing ID, and how many days
+// CHECKOUT-instructions go out before the actual checkout date.
 const LEASE_REMINDER_START_DAYS = 1;
+const LEASE_DEADLINE_DAYS = 3;
+const ID_REMINDER_INTERVAL_DAYS = 7;
 const CHECKOUT_REMINDER_DAYS_BEFORE = 1;
 
 function isAuthorizedCronRequest(req) {
@@ -46,7 +59,9 @@ module.exports = async function handler(req, res) {
   const today = key(new Date());
   const results = {
     checkinEmailsSent: [], arrivalRemindersSent: [],
-    leaseRemindersSent: [], checkoutRemindersSent: [],
+    leaseRemindersSent: [], leaseOverdueAlertsSent: [],
+    idRemindersSent: [], idUrgentRemindersSent: [],
+    checkoutRemindersSent: [],
     errors: [],
   };
 
@@ -110,28 +125,51 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // ---- Daily lease-signing reminder, until signed ----
+    // ---- Daily lease-signing reminder, until signed or the deadline passes ----
     // Sent once per day starting LEASE_REMINDER_START_DAYS after booking,
-    // for as long as leaseSignedAt remains null. leaseReminderLastSent
-    // (a date, not a boolean) is the idempotency guard here -- it lets the
-    // SAME booking receive a fresh reminder every day, while still
-    // guaranteeing at most one per calendar day even if this cron runs
-    // twice (the same protection pattern as checkinEmailSent elsewhere,
-    // just date-based instead of boolean since this repeats).
-    if (
-      !booking.leaseSignedAt &&
-      booking.status === "confirmed" &&
-      booking.leaseReminderLastSent !== today
-    ) {
+    // for as long as leaseSignedAt remains null AND today is still within
+    // the LEASE_DEADLINE_DAYS window. leaseReminderLastSent (a date, not a
+    // boolean) is the idempotency guard here -- it lets the SAME booking
+    // receive a fresh reminder every day, while still guaranteeing at most
+    // one per calendar day even if this cron runs twice (the same
+    // protection pattern as checkinEmailSent elsewhere, just date-based
+    // instead of boolean since this repeats).
+    //
+    // Once today is PAST the deadline with still no signature, the daily
+    // guest nag stops (continuing to ask after the policy deadline has
+    // already passed would be misleading) and a one-time owner alert fires
+    // instead, guarded by leaseDeadlineFlaggedAt so it's not repeated every
+    // day after that first flag. No automatic cancellation/refund happens
+    // here -- see ownerLeaseOverdueAlertEmail's own comment for why.
+    if (!booking.leaseSignedAt && booking.status === "confirmed") {
       const createdDate = booking.createdAt ? key(new Date(booking.createdAt)) : null;
       const eligibleFrom = createdDate ? key(addDays(new Date(createdDate), LEASE_REMINDER_START_DAYS)) : today;
-      if (createdDate && today >= eligibleFrom) {
+      const deadlineDate = createdDate ? key(addDays(new Date(createdDate), LEASE_DEADLINE_DAYS)) : null;
+      const pastDeadline = deadlineDate && today > deadlineDate;
+
+      if (pastDeadline) {
+        if (!booking.leaseDeadlineFlaggedAt) {
+          try {
+            const daysOverdue = createdDate ? Math.round((new Date(today) - new Date(deadlineDate)) / 86400000) : null;
+            await sendEmail({
+              to: "risefurnishedstays@gmail.com",
+              subject: `ACTION NEEDED: lease overdue - ${booking.confirmationCode}`,
+              html: ownerLeaseOverdueAlertEmail({ booking, daysOverdue }),
+            });
+            await updateBookingStatus(booking.confirmationCode, { leaseDeadlineFlaggedAt: new Date().toISOString() });
+            results.leaseOverdueAlertsSent.push(booking.confirmationCode);
+          } catch (e) {
+            console.error("lease overdue owner alert failed for", booking.confirmationCode, e.message);
+            results.errors.push({ confirmationCode: booking.confirmationCode, step: "lease-overdue-alert", error: e.message });
+          }
+        }
+      } else if (createdDate && today >= eligibleFrom && booking.leaseReminderLastSent !== today) {
         try {
-          // 3-day deadline counts from when the lease was originally sent
-          // (booking creation date), same anchor leaseAgreementEmail uses --
-          // not from today, so the stated deadline stays consistent across
-          // every reminder rather than appearing to push back each day.
-          const signByDate = key(addDays(new Date(createdDate), 3));
+          // The 3-day deadline counts from when the lease was originally
+          // sent (booking creation date), not from today, so the stated
+          // deadline stays consistent across every reminder rather than
+          // appearing to push back each day.
+          const signByDate = key(addDays(new Date(createdDate), LEASE_DEADLINE_DAYS));
           await sendEmail({
             to: booking.guestEmail,
             subject: `Reminder: please sign your lease - RISE Furnished Stays`,
@@ -141,10 +179,7 @@ module.exports = async function handler(req, res) {
               unitCode: booking.unitCode,
               confirmationCode: booking.confirmationCode,
               signByDate,
-              // No real lease URL exists yet (BoldSign integration is not
-              // built) -- point to the contact page as a safe placeholder
-              // rather than a dead/fake link. Replace once BoldSign is wired up.
-              leaseUrl: "https://www.risefurnishedstays.com/contact.html",
+              leaseUrl: `https://www.risefurnishedstays.com/lease.html?confirmation_code=${encodeURIComponent(booking.confirmationCode)}`,
             }),
           });
           await updateBookingStatus(booking.confirmationCode, { leaseReminderLastSent: today });
@@ -152,6 +187,75 @@ module.exports = async function handler(req, res) {
         } catch (e) {
           console.error("lease reminder email failed for", booking.confirmationCode, e.message);
           results.errors.push({ confirmationCode: booking.confirmationCode, step: "lease-reminder", error: e.message });
+        }
+      }
+    }
+
+    // ---- ID-upload reminders: weekly until uploaded, plus one urgent
+    // reminder the day before check-in regardless of the weekly cadence ----
+    // Only relevant once the lease is signed (an unsigned-lease booking is
+    // already being chased by the block above) and only while the stay is
+    // still upcoming -- once check-in has passed there's no point asking.
+    if (
+      booking.leaseSignedAt &&
+      !booking.govIdUploadedAt &&
+      booking.status === "confirmed" &&
+      booking.checkIn &&
+      today <= booking.checkIn
+    ) {
+      const dayBeforeCheckIn = key(addDays(new Date(booking.checkIn), -1));
+      const isUrgentDay = today === dayBeforeCheckIn;
+
+      if (isUrgentDay && !booking.idUrgentReminderSent) {
+        try {
+          await sendEmail({
+            to: booking.guestEmail,
+            subject: `Urgent: your ID is still needed before tomorrow's check-in - RISE Furnished Stays`,
+            replyTo: "risefurnishedstays@gmail.com",
+            html: idUploadReminderEmail({
+              guestName: booking.guestName,
+              unitCode: booking.unitCode,
+              confirmationCode: booking.confirmationCode,
+              idUploadUrl: `https://www.risefurnishedstays.com/id-upload.html?confirmation_code=${encodeURIComponent(booking.confirmationCode)}`,
+              checkIn: booking.checkIn,
+              urgent: true,
+            }),
+          });
+          await updateBookingStatus(booking.confirmationCode, { idUrgentReminderSent: true });
+          results.idUrgentRemindersSent.push(booking.confirmationCode);
+        } catch (e) {
+          console.error("urgent ID reminder email failed for", booking.confirmationCode, e.message);
+          results.errors.push({ confirmationCode: booking.confirmationCode, step: "id-reminder-urgent", error: e.message });
+        }
+      } else if (!isUrgentDay) {
+        // Weekly cadence, anchored to when the lease was signed so every
+        // booking gets a consistent every-7-days rhythm regardless of when
+        // in the week they happened to sign.
+        const signedDate = key(new Date(booking.leaseSignedAt));
+        const daysSinceSigned = Math.round((new Date(today) - new Date(signedDate)) / 86400000);
+        const dueForWeeklyReminder = daysSinceSigned > 0 && daysSinceSigned % ID_REMINDER_INTERVAL_DAYS === 0;
+
+        if (dueForWeeklyReminder && booking.idReminderLastSent !== today) {
+          try {
+            await sendEmail({
+              to: booking.guestEmail,
+              subject: `Reminder: please upload your ID - RISE Furnished Stays`,
+              replyTo: "risefurnishedstays@gmail.com",
+              html: idUploadReminderEmail({
+                guestName: booking.guestName,
+                unitCode: booking.unitCode,
+                confirmationCode: booking.confirmationCode,
+                idUploadUrl: `https://www.risefurnishedstays.com/id-upload.html?confirmation_code=${encodeURIComponent(booking.confirmationCode)}`,
+                checkIn: booking.checkIn,
+                urgent: false,
+              }),
+            });
+            await updateBookingStatus(booking.confirmationCode, { idReminderLastSent: today });
+            results.idRemindersSent.push(booking.confirmationCode);
+          } catch (e) {
+            console.error("ID reminder email failed for", booking.confirmationCode, e.message);
+            results.errors.push({ confirmationCode: booking.confirmationCode, step: "id-reminder", error: e.message });
+          }
         }
       }
     }
