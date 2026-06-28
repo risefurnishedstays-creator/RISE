@@ -257,20 +257,29 @@
   });
 })();
 
-/* RISE — booking-stage step strip.
+/* RISE — booking-stage step indicator.
    Shows the guest where they are in the booking flow: Select Dates and Unit
-   > Book > Pay > Sign Lease > Confirmation & Send ID. Injected right below
-   the header on every flow page; pages outside the flow (home, legal pages,
-   guidebook, contact) are left untouched. Self-contained IIFE so a failure
-   here can never affect the mobile nav drawer above. */
+   > Book & Pay > Sign Lease > Send ID and Complete Booking. Injected right
+   below the header on every flow page; pages outside the flow (home, legal
+   pages, guidebook, contact) are left untouched. Self-contained IIFE so a
+   failure here can never affect the mobile nav drawer above.
+
+   Visual approach: each step is its own small hand-drawn tag (sketch
+   border, hard offset shadow, slight independent rotation) sitting right
+   on the page background -- same family as the site's hero-tape labels and
+   postcard corner tags -- rather than a single rigid bar with identical,
+   perfectly aligned pills. Not sticky: a transparent row of floating tags
+   would look messy with page content scrolling underneath it, and removing
+   stickiness also avoids needing to keep other elements' sticky offsets in
+   sync with this one's height. */
 (function () {
   'use strict';
 
   var STEPS = [
-    { key: 'select', label: 'Select Dates & Unit' },
-    { key: 'bookpay', label: 'Book & Pay' },
-    { key: 'sign', label: 'Sign Lease' },
-    { key: 'confirm', label: 'Send ID and Complete Booking' }
+    { key: 'select', label: 'Select Dates & Unit', rot: -2 },
+    { key: 'bookpay', label: 'Book & Pay', rot: 1.5 },
+    { key: 'sign', label: 'Sign Lease', rot: -1.5 },
+    { key: 'confirm', label: 'Send ID and Complete Booking', rot: 2 }
   ];
 
   // Map each flow page to the step key that is "current" on that page.
@@ -290,28 +299,22 @@
   var header = document.querySelector('header.nav');
   if (!header) return;
 
-  var firstActiveIdx = STEPS.length, lastActiveIdx = -1;
+  var firstActiveIdx = STEPS.length;
   STEPS.forEach(function (s, i) {
-    if (activeKeys.indexOf(s.key) === -1) return;
-    if (i < firstActiveIdx) firstActiveIdx = i;
-    if (i > lastActiveIdx) lastActiveIdx = i;
+    if (activeKeys.indexOf(s.key) !== -1 && i < firstActiveIdx) firstActiveIdx = i;
   });
 
-  // Black background matching the site footer (var(--ink)), white step text.
-  // Every step -- done, current, or upcoming -- gets the same sketch-style
-  // bordered box treatment so the design reads as one consistent family
-  // rather than some steps looking boxed and others looking like plain text.
   var css = '\n'
-    + '.rise-stepstrip { position: sticky; top: 0; z-index: 49; background: var(--ink); border-bottom: 2.5px solid var(--line); padding: 14px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }\n'
-    + '.rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 10px; max-width: 1120px; margin: 0 auto; padding: 0 18px; font-family: var(--font-body); font-size: 18px; white-space: nowrap; min-width: max-content; }\n'
-    + '.rise-step { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: var(--radius-sketch); color: var(--paper); border: 2px solid color-mix(in oklab, var(--paper) 38%, transparent); font-weight: 500; }\n'
-    + '.rise-step .num { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-family: ui-monospace, \'SF Mono\', Menlo, monospace; font-size: 12px; }\n'
-    + '.rise-step.done { border-color: var(--paper); }\n'
-    + '.rise-step.done .num { background: var(--paper); border-color: var(--paper); color: var(--ink); }\n'
-    + '.rise-step.current { background: var(--accent); border-color: var(--paper); font-weight: 700; box-shadow: 3px 3px 0 color-mix(in oklab, var(--paper) 55%, transparent); }\n'
+    + '.rise-stepstrip { background: var(--paper-2); border-bottom: 2px dashed color-mix(in oklab, var(--ink) 25%, transparent); padding: 16px 0 18px; overflow-x: auto; -webkit-overflow-scrolling: touch; }\n'
+    + '.rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 14px; max-width: 1120px; margin: 0 auto; padding: 4px 18px; font-family: var(--font-body); font-size: 16px; white-space: nowrap; min-width: max-content; }\n'
+    + '.rise-step { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: var(--radius-sketch); border: 2px solid var(--line); background: var(--paper); color: var(--ink-soft); font-weight: 500; box-shadow: 2px 2px 0 var(--ink); }\n'
+    + '.rise-step .num { width: 19px; height: 19px; flex: none; border-radius: 50%; border: 2px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-family: ui-monospace, \'SF Mono\', Menlo, monospace; font-size: 11px; }\n'
+    + '.rise-step.done { color: var(--ink); border-radius: var(--radius-sketch-2); }\n'
+    + '.rise-step.done .num { background: var(--ink); border-color: var(--ink); color: var(--paper); }\n'
+    + '.rise-step.current { color: #fff; background: var(--accent); border-color: var(--line); font-weight: 700; box-shadow: 3px 3px 0 var(--ink); }\n'
     + '.rise-step.current .num { border-color: #fff; }\n'
-    + '.rise-step-sep { color: var(--paper); opacity: .4; font-size: 20px; }\n'
-    + '@media (max-width: 640px) { .rise-stepstrip-inner { font-size: 16px; justify-content: flex-start; } .rise-step { padding: 7px 11px; } }\n';
+    + '.rise-step-sep { color: var(--ink-soft); opacity: .55; font-family: \'Caveat\', cursive; font-size: 22px; transform: translateY(-1px); }\n'
+    + '@media (max-width: 640px) { .rise-stepstrip-inner { font-size: 14.5px; justify-content: flex-start; gap: 10px; } .rise-step { padding: 6px 10px; } }\n';
 
   var style = document.createElement('style');
   style.textContent = css;
@@ -325,8 +328,9 @@
     var marker = (!isActive && i < firstActiveIdx)
       ? '<span class="num">\u2713</span>'
       : '<span class="num">' + (i + 1) + '</span>';
-    var sep = i < STEPS.length - 1 ? '<span class="rise-step-sep">&rsaquo;</span>' : '';
-    return '<span class="' + cls + '">' + marker + s.label + '</span>' + sep;
+    var sep = i < STEPS.length - 1 ? '<span class="rise-step-sep">\u2972</span>' : '';
+    var rotStyle = ' style="transform: rotate(' + s.rot + 'deg);"';
+    return '<span class="' + cls + '"' + rotStyle + '>' + marker + s.label + '</span>' + sep;
   }).join('') + '</div>';
 
   var strip = document.createElement('nav');
@@ -343,25 +347,4 @@
   if (currentEl) {
     currentEl.scrollIntoView({ block: 'nearest', inline: 'center' });
   }
-
-  // Sticky pages (unit pages' booking card, checkout's order summary) anchor
-  // to a hardcoded `top` calibrated to the header's height alone. Now that
-  // the strip adds height below the header, bump any sticky element that
-  // was anchored just below the header by the strip's real measured height,
-  // so it lands right under the strip instead of overlapping it.
-  function adjustStickyOffsets() {
-    var headerH = header.getBoundingClientRect().height;
-    strip.style.top = headerH + 'px';
-    var stripH = strip.getBoundingClientRect().height;
-    document.querySelectorAll('.abnb-card, .summary').forEach(function (el) {
-      var cs = window.getComputedStyle(el);
-      if (cs.position !== 'sticky') return;
-      el.style.top = (headerH + stripH + 8) + 'px';
-    });
-  }
-  // header is also sticky and may change height across breakpoints (rise-nav.js
-  // resizes it on mobile), so recompute after layout settles and on resize.
-  window.addEventListener('load', adjustStickyOffsets);
-  window.addEventListener('resize', adjustStickyOffsets);
-  setTimeout(adjustStickyOffsets, 0);
 })();

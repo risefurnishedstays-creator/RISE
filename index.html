@@ -279,7 +279,7 @@
   .avail-field.active .avail-rule { border-bottom-color: var(--accent); }
   .avail-field.active label { color: var(--accent); }
 
-  .avail-edit-hint { font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); text-align: center; margin: 14px 0 0; }
+  .avail-edit-hint { font-family: var(--font-body); font-style: italic; color: var(--accent); font-size: 14.5px; line-height: 1.35; display: flex; gap: 6px; align-items: flex-start; justify-content: center; margin: 14px 0 0; }
 
   .avail-actions { display: flex; gap: 12px; margin-top: 26px; align-items: center; flex-wrap: wrap; }
   .avail-min-hint { margin-left: auto; font-family: 'Caveat', cursive; font-size: 16px; color: var(--ink-soft); transform: rotate(-2deg); }
@@ -291,30 +291,30 @@
 
   /* calendar popover -- same design language as checkout.html's .cal-pop, sized down for this context.
      Position (top/left) is set dynamically in JS to anchor under whichever field is active. */
-  .avail-cal-pop { position: absolute; width: 240px; z-index: 70; background: var(--paper); border: 2.5px solid var(--line); border-radius: 11px; box-shadow: 4px 5px 0 var(--ink); padding: 11px; }
+  .avail-cal-pop { position: absolute; width: 336px; z-index: 70; background: var(--paper); border: 2.5px solid var(--line); border-radius: 15px; box-shadow: 5px 6px 0 var(--ink); padding: 15px; }
   .avail-cal-pop[hidden] { display: none; }
-  .avail-cal-pop-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
-  .avail-cal-pop-month { font-family: var(--font-head); font-size: 13.5px; }
-  .avail-cal-pop-nav { display: flex; gap: 5px; }
-  .avail-cal-pop-nav button { width: 24px; height: 24px; border: 1.5px solid var(--line); border-radius: 7px; background: var(--paper); cursor: pointer; font-size: 12.5px; line-height: 1; box-shadow: 1.5px 1.5px 0 var(--ink); }
+  .avail-cal-pop-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
+  .avail-cal-pop-month { font-family: var(--font-head); font-size: 19px; }
+  .avail-cal-pop-nav { display: flex; gap: 7px; }
+  .avail-cal-pop-nav button { width: 34px; height: 34px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--paper); cursor: pointer; font-size: 17.5px; line-height: 1; box-shadow: 2px 2px 0 var(--ink); }
   .avail-cal-pop-nav button:hover { background: var(--accent); color: #fff; }
-  .avail-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
-  .avail-cal-dow { font-family: ui-monospace, monospace; font-size: 7.5px; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-soft); text-align: center; padding-bottom: 3px; }
-  .avail-cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; border: 1.5px solid transparent; border-radius: 6px; }
+  .avail-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+  .avail-cal-dow { font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-soft); text-align: center; padding-bottom: 4px; }
+  .avail-cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 14px; border: 1.5px solid transparent; border-radius: 8px; }
   .avail-cal-day.in { border-color: color-mix(in oklab, var(--ink) 14%, transparent); }
   .avail-cal-day.past { color: color-mix(in oklab, var(--ink) 30%, transparent); }
   .avail-cal-day.sel { cursor: pointer; }
   .avail-cal-day.sel:hover { border-color: var(--accent); background: var(--accent-soft); }
-  .avail-cal-day.sel-start, .avail-cal-day.sel-end { background: var(--accent); color:#fff; border-color: var(--line); font-weight: 700; border-radius: 6px; }
-  .avail-cal-pop-note { font-size: 11px; color: var(--red); font-weight: 700; margin: 8px 0 0; line-height: 1.35; background: var(--red-soft); border-radius: 6px; padding: 6px 8px; }
-  .avail-cal-legend { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; font-size: 9px; color: var(--ink-soft); }
+  .avail-cal-day.sel-start, .avail-cal-day.sel-end { background: var(--accent); color:#fff; border-color: var(--line); font-weight: 700; border-radius: 8px; }
+  .avail-cal-pop-note { font-size: 15px; color: var(--red); font-weight: 700; margin: 11px 0 0; line-height: 1.35; background: var(--red-soft); border-radius: 8px; padding: 8px 11px; }
+  .avail-cal-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 13px; font-size: 12.5px; color: var(--ink-soft); }
   .avail-cal-legend span { display: inline-flex; align-items: center; gap: 4px; }
-  .avail-cal-legend i { width: 10px; height: 10px; border: 1.5px solid var(--line); border-radius: 3px; flex: none; }
+  .avail-cal-legend i { width: 14px; height: 14px; border: 1.5px solid var(--line); border-radius: 4px; flex: none; }
   .avail-cal-legend i.open { background: var(--paper); }
   .avail-cal-legend i.past { background: color-mix(in oklab, var(--ink) 12%, transparent); }
-  .avail-cal-pop-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; padding-top: 8px; border-top: 2px dashed color-mix(in oklab,var(--ink) 16%, transparent); }
-  .avail-cal-pop-foot button { background: none; border: none; cursor: pointer; font-family: var(--font-body); font-size: 11.5px; color: var(--ink); text-decoration: underline; padding: 3px 2px; }
-  .avail-cal-pop-foot .avail-cal-done { text-decoration: none; font-weight: 700; border: 2px solid var(--line); border-radius: 7px; padding: 5px 12px; box-shadow: 2px 2px 0 var(--ink); }
+  .avail-cal-pop-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 13px; padding-top: 11px; border-top: 2px dashed color-mix(in oklab,var(--ink) 16%, transparent); }
+  .avail-cal-pop-foot button { background: none; border: none; cursor: pointer; font-family: var(--font-body); font-size: 16px; color: var(--ink); text-decoration: underline; padding: 4px 3px; }
+  .avail-cal-pop-foot .avail-cal-done { text-decoration: none; font-weight: 700; border: 2px solid var(--line); border-radius: 10px; padding: 7px 17px; box-shadow: 3px 3px 0 var(--ink); }
   .avail-cal-pop-foot .avail-cal-done:hover { background: var(--accent); color: #fff; }
 
   /* Cards hidden by the availability filter -- kept in the DOM (not removed)
@@ -427,7 +427,7 @@
           </div>
         </div>
         <div class="avail-cal-pop" id="availCalPop" hidden></div>
-        <p class="avail-edit-hint">✎ Tap a date to choose</p>
+        <p class="avail-edit-hint">✎ Tap a date to choose.</p>
 
         <!-- Real date inputs stay in the DOM (visually hidden) so the existing
              availability-check / clear logic below can keep reading .value
@@ -582,7 +582,7 @@
                 <line x1="11" y1="4" x2="18" y2="11"></line>
               </svg>
             </span>
-            <h4 class="fs-title">Sign the Lease</h4>
+            <h4 class="fs-title">Sign the Lease and Send ID</h4>
           </div>
           <p class="fs-desc">Review and digitally sign your lease right on our website after payment — no inbox, no third-party e-signature tool. Once signed, you'll send a photo ID to risefurnishedstays@gmail.com for verification.</p>
         </div>

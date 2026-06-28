@@ -23,26 +23,38 @@
   var css = `
   .cf-card { max-width: 640px; margin: 0 auto; padding: 40px 40px 36px; box-shadow: 6px 7px 0 var(--ink); text-align: center; }
   .cf-badge { width: 72px; height: 72px; margin: 0 auto 20px; border: 2.5px solid var(--line); border-radius: 50%; background: var(--green-soft); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 36px; box-shadow: 3px 3px 0 var(--ink); }
-  .cf-kick { font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+
+  /* One consistent small-label treatment for every eyebrow/header on this
+     page (Payment successful, Confirmation code, the Action Needed
+     heading) -- same family as the site's other section eyebrows, just
+     sized to actually be readable. */
+  .cf-eyebrow { font-family: ui-monospace, monospace; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+  .cf-kick { color: var(--accent); margin-bottom: 10px; }
   .cf-card h1 { font-size: clamp(30px, 4vw, 42px); line-height: 1.04; margin-bottom: 14px; }
-  .cf-lede { color: var(--ink-soft); font-size: 16px; line-height: 1.6; margin: 0 auto 24px; max-width: 46ch; }
+
+  /* One consistent body size (15.5px) for every paragraph/row of real
+     content on the page -- the lede, the recap rows, and the next-steps
+     list all read at the same size now instead of five different ones. */
+  .cf-lede { color: var(--ink-soft); font-size: 15.5px; line-height: 1.6; margin: 0 auto 24px; max-width: 46ch; }
   .cf-lede b { color: var(--ink); }
-  .cf-code { display: inline-flex; flex-direction: column; gap: 4px; align-items: center; font-family: ui-monospace, monospace; border: 2.5px solid var(--line); border-radius: 12px; padding: 12px 24px; margin-bottom: 28px; background: var(--accent-soft); box-shadow: 3px 3px 0 var(--ink); }
-  .cf-code .cl { font-size: 18px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
-  .cf-code .cv { font-size: 19px; font-weight: 700; letter-spacing: .14em; }
+  .cf-code { display: inline-flex; flex-direction: column; gap: 4px; align-items: center; border: 2.5px solid var(--line); border-radius: 12px; padding: 12px 24px; margin-bottom: 28px; background: var(--accent-soft); box-shadow: 3px 3px 0 var(--ink); }
+  .cf-code .cl { color: var(--ink-soft); }
+  .cf-code .cv { font-family: ui-monospace, monospace; font-size: 17px; font-weight: 700; letter-spacing: .1em; margin-top: 2px; }
 
   .cf-recap { text-align: left; border: 2.5px solid var(--line); border-radius: 14px; padding: 6px 22px 16px; margin-bottom: 28px; }
-  .cf-recap .rr { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; font-size: 14.5px; padding: 11px 0; border-bottom: 2px dashed color-mix(in oklab, var(--ink) 16%, transparent); }
+  .cf-recap .rr { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; font-size: 15.5px; padding: 11px 0; border-bottom: 2px dashed color-mix(in oklab, var(--ink) 16%, transparent); }
   .cf-recap .rr:last-child { border-bottom: none; }
   .cf-recap .rr .rk { color: var(--ink-soft); }
   .cf-recap .rr .rv { font-weight: 600; text-align: right; }
-  .cf-recap .rr.total .rv, .cf-recap .rr.total .rk { font-weight: 700; font-size: 16px; }
+  .cf-recap .rr.total .rv, .cf-recap .rr.total .rk { font-weight: 700; }
 
   .cf-sched { text-align: left; margin-bottom: 28px; }
-  .cf-sched-head { font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 10px; }
-  .cf-sched .sr { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 13.5px; padding: 6px 0; color: var(--ink-soft); }
+  .cf-sched-head { color: var(--ink-soft); margin: 0 0 10px; }
+  .cf-sched .sr { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 15.5px; padding: 6px 0; color: var(--ink-soft); }
   .cf-sched .sr.due { color: var(--ink); font-weight: 700; }
 
+  /* Action Needed box -- left as-is per explicit instruction, not touched
+     by the type-scale cleanup above. */
   .cf-next { text-align: left; background: var(--accent-soft); border: 2.5px solid var(--line); border-radius: 14px; box-shadow: 4px 4px 0 var(--ink); padding: 20px 24px; margin-bottom: 28px; }
   .cf-next-head { font-family: ui-monospace, monospace; font-size: 18px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
   .cf-next ul { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 9px; }
@@ -94,10 +106,10 @@
     mount.innerHTML =
       '<div class="cf-card box">' +
         '<div class="cf-badge">✓</div>' +
-        '<div class="cf-kick">Payment successful</div>' +
+        '<div class="cf-eyebrow cf-kick">Payment successful</div>' +
         '<h1>Send your ID to finish booking' + (first ? ', ' + first : '') + '</h1>' +
         '<p class="cf-lede">Your payment for <b>' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</b> went through, and your lease is signed. Your booking isn\'t complete yet — you\'ll need to send a photo ID before your stay is confirmed. A confirmation email with next steps is on the way to <b>' + (rec.guestEmail || 'your email') + '</b>.</p>' +
-        '<div class="cf-code"><span class="cl">Confirmation code</span><span class="cv">' + rec.confirmationCode + '</span></div>' +
+        '<div class="cf-code"><span class="cf-eyebrow cl">Confirmation code</span><span class="cv">' + rec.confirmationCode + '</span></div>' +
         '<div class="cf-recap">' +
           '<div class="rr"><span class="rk">Home</span><span class="rv">' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</span></div>' +
           '<div class="rr"><span class="rk">Dates</span><span class="rv">' + fmtLong(checkIn) + ' → ' + fmtLong(checkOut) + '</span></div>' +
@@ -107,7 +119,7 @@
         '<div class="cf-next">' +
           '<div class="cf-next-head">Action needed to complete your booking</div>' +
           '<ul>' +
-            '<li><b>Send a photo ID</b> to risefurnishedstays@gmail.com for verification.</li>' +
+            '<li><b>Send a photo ID to risefurnishedstays@gmail.com for verification.</b></li>' +
             '<li>A confirmation email with your full payment breakdown and receipt is on its way.</li>' +
             '<li>We’ll send the exact address and check-in details closer to your arrival.</li>' +
             '<li>Questions before then? Reach out via our <a href="contact.html" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">contact page</a> or at risefurnishedstays@gmail.com.</li>' +
