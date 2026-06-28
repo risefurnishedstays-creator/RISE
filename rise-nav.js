@@ -313,7 +313,7 @@
     + '.rise-step.done .num { background: var(--ink); border-color: var(--ink); color: var(--paper); }\n'
     + '.rise-step.current { color: #fff; background: var(--accent); border-color: var(--line); font-weight: 700; box-shadow: 3px 3px 0 var(--ink); }\n'
     + '.rise-step.current .num { border-color: #fff; }\n'
-    + '.rise-step-sep { color: var(--ink-soft); opacity: .55; font-family: \'Caveat\', cursive; font-size: 22px; transform: translateY(-1px); }\n'
+    + '.rise-step-sep { color: var(--ink-soft); opacity: .6; font-family: var(--font-body); font-weight: 700; font-size: 26px; line-height: 1; }\n'
     + '@media (max-width: 640px) { .rise-stepstrip-inner { font-size: 14.5px; justify-content: flex-start; gap: 10px; } .rise-step { padding: 6px 10px; } }\n';
 
   var style = document.createElement('style');
@@ -328,7 +328,7 @@
     var marker = (!isActive && i < firstActiveIdx)
       ? '<span class="num">\u2713</span>'
       : '<span class="num">' + (i + 1) + '</span>';
-    var sep = i < STEPS.length - 1 ? '<span class="rise-step-sep">\u2972</span>' : '';
+    var sep = i < STEPS.length - 1 ? '<span class="rise-step-sep">&gt;</span>' : '';
     var rotStyle = ' style="transform: rotate(' + s.rot + 'deg);"';
     return '<span class="' + cls + '"' + rotStyle + '>' + marker + s.label + '</span>' + sep;
   }).join('') + '</div>';

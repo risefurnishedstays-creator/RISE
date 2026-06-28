@@ -19,7 +19,8 @@
     --accent: oklch(0.64 0.13 45);
     --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
     --red: #b3402e; --red-soft: color-mix(in oklab, #b3402e 14%, transparent);
-    --radius-sketch: 14px;
+    --radius-sketch: 255px 12px 225px 14px / 14px 225px 14px 255px;
+    --radius-sketch-2: 14px 225px 14px 255px / 255px 12px 225px 14px;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column; }

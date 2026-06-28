@@ -82,6 +82,17 @@
   .btn.accent { background: var(--accent); color: #fff; }
   .btn.ghost { box-shadow: none; }
   .note { font-family: var(--font-body); font-style: italic; color: var(--accent); font-size: 14.5px; line-height: 1.35; display: flex; gap: 6px; align-items: flex-start; }
+
+  /* Shown above the unit cards after a date search filters them, so a
+     guest who lands here via the auto-scroll still sees WHY some homes
+     are missing instead of the static "3 homes" heading silently
+     contradicting what's actually showing below it. */
+  .avail-results-banner {
+    text-align: center; font-weight: 600; font-size: 15px; color: var(--ink);
+    background: var(--accent-soft); border: 2px solid var(--line); border-radius: var(--radius-sketch-2);
+    padding: 10px 18px; margin: 0 auto 26px; max-width: fit-content; box-shadow: 2px 2px 0 var(--ink);
+  }
+  .avail-results-banner.none { background: var(--red-soft); border-color: var(--red); color: var(--red); }
   .note::before { content: "↳"; font-style: normal; font-weight: 700; }
   .eyebrow { font-family: ui-monospace, 'SF Mono', Menlo, monospace; text-transform: uppercase; letter-spacing: .18em; font-size: 14px; color: var(--ink-soft); }
 
@@ -453,7 +464,7 @@
 <section class="choose" id="book-stay">
   <div class="wrap">
     <span class="eyebrow">Book your stay today</span>
-    <h2>Choose from one of our 3 homes</h2>
+    <h2 id="chooseHeading">Choose from one of our 3 homes</h2>
     <p class="dash">— nearly identical, each with its own character —</p>
   </div>
 </section>
@@ -461,6 +472,7 @@
 <!-- UNIT CARDS -->
 <section class="units-section" id="units">
   <div class="wrap">
+    <p class="avail-results-banner" id="availResultsBanner" style="display:none;"></p>
     <div class="cards" id="cards"><!-- injected --></div>
     <p class="note" style="margin-top:26px; justify-content:center;">Click any home to view full details — amenities, house rules, map &amp; policies.</p>
   </div>
@@ -969,10 +981,33 @@
           }
         });
 
+        var resultsBanner = document.getElementById('availResultsBanner');
+        var heading = document.getElementById('chooseHeading');
+
         if (!availableCodes.length) {
           showStatus('No homes are available for those dates. Try a different range, or clear your search.');
+          if (resultsBanner) {
+            resultsBanner.textContent = 'No homes are available for those dates — try a different range above.';
+            resultsBanner.classList.add('show', 'none');
+            resultsBanner.style.display = 'block';
+          }
+          if (heading) heading.textContent = 'No homes available for those dates';
+        } else if (availableCodes.length < UNITS.length) {
+          // Only surface the banner when something was actually filtered out --
+          // when everything's available, the unchanged heading plus the card
+          // count already make that obvious without extra noise.
+          showStatus(availableCodes.length + ' of ' + UNITS.length + ' homes available for your dates.');
+          if (resultsBanner) {
+            resultsBanner.textContent = 'Showing ' + availableCodes.length + ' of ' + UNITS.length + ' homes available for your dates. ↑ Change dates above to see more.';
+            resultsBanner.classList.remove('none');
+            resultsBanner.classList.add('show');
+            resultsBanner.style.display = 'block';
+          }
+          if (heading) heading.textContent = availableCodes.length + ' of ' + UNITS.length + ' homes available for your dates';
         } else {
           showStatus(availableCodes.length + ' of ' + UNITS.length + ' homes available for your dates.');
+          if (resultsBanner) { resultsBanner.style.display = 'none'; resultsBanner.classList.remove('show', 'none'); }
+          if (heading) heading.textContent = 'Choose from one of our ' + UNITS.length + ' homes';
         }
 
         document.getElementById('book-stay').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -986,6 +1021,11 @@
       petsEl.value = '0';
       clearMessages();
       if (typeof window.__availCalReset === 'function') window.__availCalReset();
+
+      var resultsBanner = document.getElementById('availResultsBanner');
+      if (resultsBanner) { resultsBanner.style.display = 'none'; resultsBanner.classList.remove('show', 'none'); }
+      var heading = document.getElementById('chooseHeading');
+      if (heading) heading.textContent = 'Choose from one of our ' + UNITS.length + ' homes';
 
       var cards = getAllCards();
       cards.forEach(function (card) {

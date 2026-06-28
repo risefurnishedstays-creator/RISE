@@ -89,7 +89,7 @@
   .rise-step.done .num { background: var(--ink); border-color: var(--ink); color: var(--paper); }
   .rise-step.current { color: #fff; background: var(--accent); border-color: var(--line); font-weight: 700; box-shadow: 3px 3px 0 var(--ink); }
   .rise-step.current .num { border-color: #fff; }
-  .rise-step-sep { color: var(--ink-soft); opacity: .55; font-family: 'Caveat', cursive; font-size: 22px; transform: translateY(-1px); }
+  .rise-step-sep { color: var(--ink-soft); opacity: .6; font-family: var(--font-body); font-weight: 700; font-size: 26px; line-height: 1; }
   @media (max-width: 640px) { .rise-stepstrip-inner { font-size: 14.5px; justify-content: flex-start; gap: 10px; } .rise-step { padding: 6px 10px; } }
 </style>
 </head>
@@ -103,9 +103,9 @@
 
 <nav class="rise-stepstrip" aria-label="Booking progress">
   <div class="rise-stepstrip-inner">
-    <span class="rise-step done" style="transform: rotate(-2deg);"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&#10610;</span>
-    <span class="rise-step done" style="transform: rotate(1.5deg);"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&#10610;</span>
-    <span class="rise-step current" style="transform: rotate(-1.5deg);"><span class="num">3</span>Sign Lease</span><span class="rise-step-sep">&#10610;</span>
+    <span class="rise-step done" style="transform: rotate(-2deg);"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&gt;</span>
+    <span class="rise-step done" style="transform: rotate(1.5deg);"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&gt;</span>
+    <span class="rise-step current" style="transform: rotate(-1.5deg);"><span class="num">3</span>Sign Lease</span><span class="rise-step-sep">&gt;</span>
     <span class="rise-step" style="transform: rotate(2deg);"><span class="num">4</span>Send ID and Complete Booking</span>
   </div>
 </nav>
