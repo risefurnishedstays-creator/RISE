@@ -273,7 +273,11 @@
       checkOut = null;
     }
     pickMode = (mode === 'out' && checkIn) ? 'out' : 'in';
-    var base = (pickMode === 'out' && checkIn) ? checkIn : (checkIn || firstOpen);
+    // Default to the CURRENT month whenever nothing is picked yet for this
+    // field -- regardless of whether today (or this month) happens to be
+    // booked out. Only fall back to the already-picked date (checkIn, when
+    // reopening to adjust checkout) once something has actually been selected.
+    var base = (pickMode === 'out' && checkIn) ? checkIn : (checkIn || today);
     calRef = new Date(base.getFullYear(), base.getMonth(), 1);
     closeBreakdown();
     abPop.hidden = false;
