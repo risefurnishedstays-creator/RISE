@@ -49,6 +49,7 @@
     --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
     --radius-sketch: 255px 12px 225px 14px / 14px 225px 14px 255px;
     --radius-sketch-2: 14px 225px 14px 255px / 255px 12px 225px 14px;
+    --red: #b3402e; --red-soft: color-mix(in oklab, #b3402e 14%, transparent);
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -227,30 +228,99 @@
   @media (max-width: 560px) { .foot-grid { grid-template-columns: 1fr; } }
 
   /* AVAILABILITY SEARCH */
-  .avail-section { padding: 56px 0 8px; position: relative; z-index: 1; }
-  .avail-box { max-width: 1000px; margin: 0 auto; padding: 28px 32px; }
-  .avail-title { text-align: center; font-size: clamp(22px, 3vw, 30px); margin-bottom: 6px; }
-  .avail-sub { text-align: center; color: var(--ink-soft); font-size: 14.5px; margin-bottom: 22px; }
-  .avail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto auto; gap: 14px; align-items: end; }
-  .avail-field label { display: block; font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
-  .avail-field input, .avail-field select {
-    width: 100%; font-family: var(--font-body); font-size: 15px; padding: 11px 12px;
-    border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+  .avail-section { padding: 56px 0 8px; position: relative; z-index: 2; }
+  .avail-head { text-align: center; max-width: 720px; margin: 0 auto 32px; }
+  .avail-head .eyebrow { display: block; margin-bottom: 12px; }
+  .avail-head h2 { font-size: clamp(28px, 4vw, 40px); }
+  .avail-head .dash { font-family: 'Caveat', cursive; color: var(--accent); font-size: 28px; margin-top: 6px; display: block; }
+
+  /* postcard */
+  .avail-postcard-wrap { max-width: 640px; margin: 0 auto; position: relative; }
+  .avail-postcard {
+    background: var(--paper);
+    border: 2.5px solid var(--line);
+    border-radius: 6px;
+    padding: 30px 32px 28px;
+    position: relative;
+    box-shadow: 6px 7px 0 var(--ink);
+    transform: rotate(-0.4deg);
   }
-  .avail-grid .btn { white-space: nowrap; padding: 11px 22px; }
-  .avail-err { color: #b3261e; font-size: 13.5px; text-align: center; margin-top: 14px; display: none; }
+  .avail-postcard::before {
+    content: '';
+    position: absolute; top: -1px; left: 18px; right: 18px; height: 0;
+    border-top: 2.5px dashed color-mix(in oklab, var(--ink) 45%, transparent);
+  }
+  .avail-postcard-corner {
+    position: absolute; top: -13px; right: 22px; transform: rotate(4deg);
+    background: var(--accent); color: #fff; font-family: 'Caveat', cursive; font-weight: 700; font-size: 19px;
+    padding: 2px 14px; border: 2px solid var(--line); border-radius: 3px;
+  }
+
+  .avail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 28px; margin-top: 4px; }
+  .avail-field { position: relative; }
+  .avail-field label {
+    display: block; font-family: 'Caveat', cursive; font-weight: 700; font-size: 20px; color: var(--ink-soft);
+    margin-bottom: 3px;
+  }
+  .avail-rule { border-bottom: 1.5px solid color-mix(in oklab, var(--ink) 30%, transparent); padding-bottom: 5px; }
+  .avail-field select {
+    width: 100%; font-family: var(--font-body); font-weight: 600; font-size: 18.5px;
+    border: none; background: transparent; color: var(--ink); padding: 0; appearance: none; -webkit-appearance: none;
+  }
+  .avail-field select:focus { outline: none; }
+
+  /* check-in / check-out trigger buttons -- same baseline-rule look as selects */
+  button.avail-date-btn {
+    font: inherit; width: 100%; background: none; border: none; padding: 0; cursor: pointer;
+    text-align: left; display: block;
+  }
+  .avail-date-btn .v { font-family: var(--font-body); font-weight: 600; font-size: 18.5px; color: var(--ink); }
+  .avail-date-btn:hover .v { color: var(--accent); }
+  .avail-field.active .avail-rule { border-bottom-color: var(--accent); }
+  .avail-field.active label { color: var(--accent); }
+
+  .avail-edit-hint { font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); text-align: center; margin: 14px 0 0; }
+
+  .avail-actions { display: flex; gap: 12px; margin-top: 26px; align-items: center; flex-wrap: wrap; }
+  .avail-min-hint { margin-left: auto; font-family: 'Caveat', cursive; font-size: 16px; color: var(--ink-soft); transform: rotate(-2deg); }
+
+  .avail-err { color: var(--red); font-size: 13.5px; text-align: center; margin-top: 14px; display: none; }
   .avail-err.show { display: block; }
   .avail-status { color: var(--ink-soft); font-size: 13.5px; text-align: center; margin-top: 14px; display: none; }
   .avail-status.show { display: block; }
+
+  /* calendar popover -- same design language as checkout.html's .cal-pop, sized down for this context.
+     Position (top/left) is set dynamically in JS to anchor under whichever field is active. */
+  .avail-cal-pop { position: absolute; width: 240px; z-index: 70; background: var(--paper); border: 2.5px solid var(--line); border-radius: 11px; box-shadow: 4px 5px 0 var(--ink); padding: 11px; }
+  .avail-cal-pop[hidden] { display: none; }
+  .avail-cal-pop-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+  .avail-cal-pop-month { font-family: var(--font-head); font-size: 13.5px; }
+  .avail-cal-pop-nav { display: flex; gap: 5px; }
+  .avail-cal-pop-nav button { width: 24px; height: 24px; border: 1.5px solid var(--line); border-radius: 7px; background: var(--paper); cursor: pointer; font-size: 12.5px; line-height: 1; box-shadow: 1.5px 1.5px 0 var(--ink); }
+  .avail-cal-pop-nav button:hover { background: var(--accent); color: #fff; }
+  .avail-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; }
+  .avail-cal-dow { font-family: ui-monospace, monospace; font-size: 7.5px; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-soft); text-align: center; padding-bottom: 3px; }
+  .avail-cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 10px; border: 1.5px solid transparent; border-radius: 6px; }
+  .avail-cal-day.in { border-color: color-mix(in oklab, var(--ink) 14%, transparent); }
+  .avail-cal-day.past { color: color-mix(in oklab, var(--ink) 30%, transparent); }
+  .avail-cal-day.sel { cursor: pointer; }
+  .avail-cal-day.sel:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .avail-cal-day.sel-start, .avail-cal-day.sel-end { background: var(--accent); color:#fff; border-color: var(--line); font-weight: 700; border-radius: 6px; }
+  .avail-cal-pop-note { font-size: 11px; color: var(--red); font-weight: 700; margin: 8px 0 0; line-height: 1.35; background: var(--red-soft); border-radius: 6px; padding: 6px 8px; }
+  .avail-cal-legend { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; font-size: 9px; color: var(--ink-soft); }
+  .avail-cal-legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .avail-cal-legend i { width: 10px; height: 10px; border: 1.5px solid var(--line); border-radius: 3px; flex: none; }
+  .avail-cal-legend i.open { background: var(--paper); }
+  .avail-cal-legend i.past { background: color-mix(in oklab, var(--ink) 12%, transparent); }
+  .avail-cal-pop-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; padding-top: 8px; border-top: 2px dashed color-mix(in oklab,var(--ink) 16%, transparent); }
+  .avail-cal-pop-foot button { background: none; border: none; cursor: pointer; font-family: var(--font-body); font-size: 11.5px; color: var(--ink); text-decoration: underline; padding: 3px 2px; }
+  .avail-cal-pop-foot .avail-cal-done { text-decoration: none; font-weight: 700; border: 2px solid var(--line); border-radius: 7px; padding: 5px 12px; box-shadow: 2px 2px 0 var(--ink); }
+  .avail-cal-pop-foot .avail-cal-done:hover { background: var(--accent); color: #fff; }
 
   /* Cards hidden by the availability filter -- kept in the DOM (not removed)
      so Clear can simply un-hide them without re-rendering from UNITS. */
   .ucard.avail-hidden { display: none; }
 
-  @media (max-width: 900px) {
-    .avail-grid { grid-template-columns: 1fr 1fr; }
-    .avail-grid .btn { grid-column: span 1; }
-  }
   @media (max-width: 560px) {
     .avail-grid { grid-template-columns: 1fr; }
   }
@@ -311,40 +381,69 @@
 <div style="position:relative;z-index:1;padding:0 28px;"><div style="max-width:1120px;margin:32px auto 0;border-top:2px dashed color-mix(in oklab,var(--ink) 22%,transparent);"></div></div>
 <section class="avail-section">
   <div class="wrap">
-    <div class="box avail-box">
-      <h2 class="avail-title">Check availability</h2>
-      <p class="avail-sub">Pick your dates and we'll show only the homes that are open — or clear your search to see all three again.</p>
-      <div class="avail-grid">
-        <div class="avail-field">
-          <label for="availCheckIn">Check-in</label>
-          <input type="date" id="availCheckIn" />
+    <div class="avail-head">
+      <span class="eyebrow">Check availability</span>
+      <h2>Find your dates</h2>
+      <span class="dash">— pick a range, we'll show what's open —</span>
+    </div>
+
+    <div class="avail-postcard-wrap">
+      <div class="avail-postcard">
+        <span class="avail-postcard-corner">your stay ✦</span>
+
+        <div class="avail-grid">
+          <div class="avail-field" id="availFieldIn">
+            <label for="availCheckInBtn">Check-in</label>
+            <div class="avail-rule">
+              <button type="button" class="avail-date-btn" id="availCheckInBtn"><span class="v" id="availCheckInDisplay">Select date</span></button>
+            </div>
+          </div>
+          <div class="avail-field" id="availFieldOut">
+            <label for="availCheckOutBtn">Check-out</label>
+            <div class="avail-rule">
+              <button type="button" class="avail-date-btn" id="availCheckOutBtn"><span class="v" id="availCheckOutDisplay">Select date</span></button>
+            </div>
+          </div>
+          <div class="avail-field">
+            <label for="availGuests">Guests</label>
+            <div class="avail-rule">
+              <select id="availGuests">
+                <option value="1">1 guest</option>
+                <option value="2">2 guests</option>
+                <option value="3">3 guests</option>
+                <option value="4" selected>4 guests</option>
+              </select>
+            </div>
+          </div>
+          <div class="avail-field">
+            <label for="availPets">Pets</label>
+            <div class="avail-rule">
+              <select id="availPets">
+                <option value="0" selected>No pets</option>
+                <option value="1">1 pet</option>
+                <option value="2">2 pets</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="avail-field">
-          <label for="availCheckOut">Check-out</label>
-          <input type="date" id="availCheckOut" />
+        <div class="avail-cal-pop" id="availCalPop" hidden></div>
+        <p class="avail-edit-hint">✎ Tap a date to choose</p>
+
+        <!-- Real date inputs stay in the DOM (visually hidden) so the existing
+             availability-check / clear logic below can keep reading .value
+             exactly as before -- the postcard above is just a custom-styled
+             front end for these same two fields. -->
+        <input type="date" id="availCheckIn" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;" tabindex="-1" aria-hidden="true" />
+        <input type="date" id="availCheckOut" style="position:absolute; width:1px; height:1px; opacity:0; pointer-events:none;" tabindex="-1" aria-hidden="true" />
+
+        <div class="avail-actions">
+          <button class="btn accent" id="availCheckBtn" type="button">Check availability</button>
+          <button class="btn ghost" id="availClearBtn" type="button">Clear</button>
+          <span class="avail-min-hint">30-night minimum →</span>
         </div>
-        <div class="avail-field">
-          <label for="availGuests">Guests</label>
-          <select id="availGuests">
-            <option value="1">1 guest</option>
-            <option value="2">2 guests</option>
-            <option value="3">3 guests</option>
-            <option value="4" selected>4 guests</option>
-          </select>
-        </div>
-        <div class="avail-field">
-          <label for="availPets">Pets</label>
-          <select id="availPets">
-            <option value="0" selected>No pets</option>
-            <option value="1">1 pet</option>
-            <option value="2">2 pets</option>
-          </select>
-        </div>
-        <button class="btn accent" id="availCheckBtn" type="button">Check availability</button>
-        <button class="btn ghost" id="availClearBtn" type="button">Clear</button>
+        <p class="avail-err" id="availErr"></p>
+        <p class="avail-status" id="availStatus"></p>
       </div>
-      <p class="avail-err" id="availErr"></p>
-      <p class="avail-status" id="availStatus"></p>
     </div>
   </div>
 </section>
@@ -590,6 +689,159 @@
     </a>`;
   }).join('');
 
+  // ---- Availability search: calendar popover for the postcard date fields ----
+  // This is purely a custom-styled front end for the two native #availCheckIn /
+  // #availCheckOut date inputs below -- it writes picked dates into those
+  // inputs' .value, so the existing check/clear logic (next block) keeps
+  // working completely unchanged, exactly like a date-picker library would
+  // wrap a native input. The two fields are fully independent: picking
+  // check-in only ever touches the check-in input, and picking check-out
+  // only ever touches the check-out input.
+  (function () {
+    var DOW = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    var checkInEl = document.getElementById('availCheckIn');
+    var checkOutEl = document.getElementById('availCheckOut');
+    var inBtn = document.getElementById('availCheckInBtn');
+    var outBtn = document.getElementById('availCheckOutBtn');
+    var inDisplay = document.getElementById('availCheckInDisplay');
+    var outDisplay = document.getElementById('availCheckOutDisplay');
+    var fieldIn = document.getElementById('availFieldIn');
+    var fieldOut = document.getElementById('availFieldOut');
+    var pop = document.getElementById('availCalPop');
+
+    if (!checkInEl || !inBtn || !pop) return; // section not present on this render
+
+    function gid(id) { return document.getElementById(id); }
+    function key(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function parseKey(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+    function nightsBetween(a, b) { return Math.round((b - a) / 86400000); }
+    function fmtShort(d) { return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    function isPast(d) { return d < today; }
+    function isAvail(d) { return !isPast(d); } // no unit chosen yet at this step, so only past/open is known
+    function firstOpen() { return new Date(today); }
+
+    var MIN_NIGHTS = 30;
+    var calOpen = false, calRef = null, pickMode = 'in', calMsg = '';
+    var checkIn = null, checkOut = null;
+
+    function setActive() {
+      fieldIn.classList.toggle('active', calOpen && pickMode === 'in');
+      fieldOut.classList.toggle('active', calOpen && pickMode === 'out');
+    }
+    function dayCls(date) {
+      var cls = 'avail-cal-day in';
+      if (isPast(date)) cls += ' past';
+      else cls += ' sel';
+      var current = pickMode === 'in' ? checkIn : checkOut;
+      if (current && key(date) === key(current)) cls += ' sel-start';
+      var other = pickMode === 'in' ? checkOut : checkIn;
+      if (other && key(date) === key(other)) cls += ' sel-end';
+      return cls;
+    }
+    function renderCalPop() {
+      var y = calRef.getFullYear(), m = calRef.getMonth();
+      var first = new Date(y, m, 1).getDay();
+      var days = new Date(y, m + 1, 0).getDate();
+      var grid = DOW.map(function (d) { return '<div class="avail-cal-dow">' + d + '</div>'; }).join('');
+      for (var i = 0; i < first; i++) grid += '<div class="avail-cal-day"></div>';
+      for (var dd = 1; dd <= days; dd++) { var date = new Date(y, m, dd); grid += '<div class="' + dayCls(date) + '" data-date="' + key(date) + '">' + dd + '</div>'; }
+      pop.innerHTML =
+        '<div class="avail-cal-pop-top"><div class="avail-cal-pop-month">' + MONTHS[m] + ' ' + y + '</div>' +
+          '<div class="avail-cal-pop-nav"><button type="button" data-nav="prev" aria-label="previous month">\u2039</button><button type="button" data-nav="next" aria-label="next month">\u203a</button></div></div>' +
+        '<div class="avail-cal-grid">' + grid + '</div>' +
+        (calMsg ? '<div class="avail-cal-pop-note">' + calMsg + '</div>' : '') +
+        '<div class="avail-cal-legend"><span><i class="open"></i> Available</span><span><i class="past"></i> Past</span></div>' +
+        '<div class="avail-cal-pop-foot"><button type="button" data-act="clear">Clear</button><button type="button" class="avail-cal-done" data-act="done">Done</button></div>';
+    }
+    function setInputValue(el, date) {
+      // Writing .value directly (rather than relying on a real <input type=date>
+      // picker) is what lets the existing check/clear logic read this unchanged.
+      el.value = date ? key(date) : '';
+    }
+    function pickDay(s) {
+      var d = parseKey(s);
+      if (!isAvail(d)) return;
+      if (pickMode === 'in') { checkIn = d; setInputValue(checkInEl, d); }
+      else { checkOut = d; setInputValue(checkOutEl, d); }
+      calMsg = '';
+      if (checkIn && checkOut) {
+        var nn = nightsBetween(checkIn, checkOut);
+        if (nn < MIN_NIGHTS) {
+          calMsg = checkOut <= checkIn
+            ? 'Check-out must be after check-in.'
+            : 'Minimum stay is ' + MIN_NIGHTS + ' nights \u2014 you have ' + nn + '.';
+        }
+      }
+      renderDisplays(); renderCalPop();
+    }
+    function renderDisplays() {
+      inDisplay.textContent = checkIn ? fmtShort(checkIn) : 'Select date';
+      outDisplay.textContent = checkOut ? fmtShort(checkOut) : 'Select date';
+    }
+    function handlePopClick(e) {
+      var nav = e.target.closest('[data-nav]');
+      if (nav) { calRef.setMonth(calRef.getMonth() + (nav.dataset.nav === 'prev' ? -1 : 1)); renderCalPop(); return; }
+      var act = e.target.closest('[data-act]');
+      if (act) {
+        if (act.dataset.act === 'clear') {
+          if (pickMode === 'in') { checkIn = null; setInputValue(checkInEl, null); }
+          else { checkOut = null; setInputValue(checkOutEl, null); }
+          calMsg = ''; renderCalPop(); renderDisplays();
+        } else { closeCal(); }
+        return;
+      }
+      var cell = e.target.closest('.avail-cal-day.sel');
+      if (cell && cell.dataset.date) pickDay(cell.dataset.date);
+    }
+    function positionPop(mode) {
+      var anchorField = mode === 'out' ? fieldOut : fieldIn;
+      var postcard = document.querySelector('.avail-postcard');
+      if (!anchorField || !postcard) return;
+      var fieldRect = anchorField.getBoundingClientRect();
+      var cardRect = postcard.getBoundingClientRect();
+      var top = (fieldRect.bottom - cardRect.top) + 7;
+      var left = fieldRect.left - cardRect.left;
+      var maxLeft = postcard.clientWidth - pop.offsetWidth - 4;
+      if (left > maxLeft) left = Math.max(4, maxLeft);
+      pop.style.top = top + 'px';
+      pop.style.left = left + 'px';
+    }
+    function openCal(mode) {
+      pickMode = mode; // fixed for this calendar session -- each field owns its own pick
+      calMsg = '';
+      var base = (mode === 'in' ? checkIn : checkOut) || (mode === 'out' && checkIn ? checkIn : firstOpen());
+      calRef = new Date(base.getFullYear(), base.getMonth(), 1);
+      calOpen = true;
+      pop.hidden = false;
+      positionPop(pickMode);
+      pop.onclick = function (e) { e.stopPropagation(); handlePopClick(e); };
+      renderCalPop(); setActive();
+    }
+    function closeCal() { calOpen = false; pop.hidden = true; setActive(); }
+    function toggleCal(mode) { if (calOpen && pickMode === mode) closeCal(); else openCal(mode); }
+
+    inBtn.onclick = function (e) { e.stopPropagation(); toggleCal('in'); };
+    outBtn.onclick = function (e) { e.stopPropagation(); toggleCal('out'); };
+    document.addEventListener('click', function (e) {
+      if (calOpen && !pop.contains(e.target) && !fieldIn.contains(e.target) && !fieldOut.contains(e.target)) closeCal();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && calOpen) closeCal(); });
+    window.addEventListener('resize', function () { if (calOpen) positionPop(pickMode); });
+
+    // Allow the existing Clear button (in the block below) to reset this
+    // widget's own visible state too -- exposed as a small hook rather than
+    // duplicating the existing clear handler's logic.
+    window.__availCalReset = function () {
+      checkIn = null; checkOut = null; calMsg = '';
+      renderDisplays();
+      if (calOpen) closeCal();
+    };
+  })();
+
   // ---- Availability search: filters the existing unit cards in place ----
   // Unlike a separate results panel, this hides/shows the SAME cards
   // already rendered above -- nothing new is added to the page, and
@@ -733,6 +985,7 @@
       guestsEl.value = '4';
       petsEl.value = '0';
       clearMessages();
+      if (typeof window.__availCalReset === 'function') window.__availCalReset();
 
       var cards = getAllCards();
       cards.forEach(function (card) {
