@@ -53,7 +53,11 @@
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
-  :target { scroll-margin-top: 88px; }
+  /* scroll-margin-top so a sticky-header page never clips a section's
+     heading when scrolled to -- applies to any scroll trigger (anchor
+     link, browser back/forward, or a plain element.scrollIntoView() call
+     from JS), not just the :target pseudo-class case. */
+  :target, #book-stay, #units, #how-it-works, #faq { scroll-margin-top: 110px; }
   body {
     margin: 0; background: var(--paper); color: var(--ink);
     font-family: var(--font-body); font-weight: 400; font-size: 17px; line-height: 1.5;
@@ -332,8 +336,25 @@
      so Clear can simply un-hide them without re-rendering from UNITS. */
   .ucard.avail-hidden { display: none; }
 
+  /* Tighten the gap between a section's intro (heading + dash) and
+     whatever comes right after it (the unit cards, the results banner,
+     etc.) -- applies at all widths, since the default spacing here reads
+     as an unexplained gap on both desktop and mobile. */
+  .choose { padding-bottom: 0; }
+  .units-section { padding-top: 14px; }
+
   @media (max-width: 560px) {
     .avail-grid { grid-template-columns: 1fr; }
+
+    /* The Caveat script dash lines ("-- pick a range...", "-- nearly
+       identical...", etc.) are sized for desktop and don't reliably fit
+       one line on phone-width screens -- on the two longest ones, that
+       means an awkward wrap, and the inherited body line-height (1.5)
+       makes the gap between the wrapped lines look much bigger than it
+       should. Shrinking the font and tightening line-height fixes both:
+       the text fits on one line on real iPhone widths, and even if a
+       still-narrower phone wraps it, the gap stays tight instead of huge. */
+    .dash { font-size: 15px !important; line-height: 1.3 !important; }
   }
 </style>
 </head>
