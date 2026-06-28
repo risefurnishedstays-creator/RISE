@@ -1,14 +1,23 @@
 // api/sign-lease.js
 //
-// Receives the guest's drawn signature from lease.html, generates the
-// final signed lease PDF (lease text + pet addendum if applicable +
-// signature + audit trail), uploads it to Google Drive, marks the
-// booking as signed, and triggers the same check-in-email-timing logic
-// that the (now-removed) BoldSign integration used to trigger via webhook.
+// Two related guest-facing actions, kept in one file to avoid spending a
+// second slot of Vercel's Hobby-plan 12-function limit (see api/ for the
+// current count -- there's exactly one free slot, and this avoids using it):
 //
-// POST /api/sign-lease
-// body: { confirmationCode, signatureImageBase64, ipAddress (optional, we
-//         also read the real one from the request itself) }
+//   action=sign (default, for backward compatibility with lease.html's
+//   existing un-parameterized POST) -- receives the guest's drawn
+//   signature, generates the final signed lease PDF (lease text + pet
+//   addendum if applicable + signature + audit trail + Landlord
+//   signature), uploads it to Google Drive, marks the booking as signed,
+//   and triggers check-in-email-timing.
+//
+//   action=upload-id -- receives a photo of the guest's government-issued
+//   ID (front side), uploads it to the same Google Drive "Signed Leases"
+//   folder, and marks the booking's ID as received. Requires the lease to
+//   already be signed.
+//
+// POST /api/sign-lease                       body: { confirmationCode, signatureImageBase64 }
+// POST /api/sign-lease?action=upload-id       body: { confirmationCode, idImageBase64 }
 
 const { getBooking, updateBookingStatus } = require("../lib/bookings");
 const { priceParts, checkinEmailTiming } = require("../lib/pricing");
@@ -26,7 +35,16 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const { confirmationCode, signatureImageBase64 } = req.body || {};
+  const action = (req.query && req.query.action || "sign").toString();
+  if (action === "upload-id") return handleUploadId(req, res);
+  return handleSign(req, res);
+};
+
+// =========================================================================
+// action=sign (default) -- original sign-lease behavior, unchanged
+// =========================================================================
+async function handleSign(req, res) {
+  const { confirmationCode, signatureImageBase64, sessionId } = req.body || {};
   if (!confirmationCode || !signatureImageBase64) {
     return res.status(400).json({ error: "confirmationCode and signatureImageBase64 are required." });
   }
@@ -143,6 +161,8 @@ module.exports = async function handler(req, res) {
     content: pdfBuffer.toString("base64"),
   };
   let leaseEmailSent = false;
+  const siteUrl = process.env.SITE_URL || "https://www.risefurnishedstays.com";
+  const idUploadUrl = sessionId ? `${siteUrl}/id-upload.html?session_id=${encodeURIComponent(sessionId)}` : null;
   try {
     await sendEmail({
       to: booking.guestEmail,
@@ -155,6 +175,7 @@ module.exports = async function handler(req, res) {
         checkIn: booking.checkIn,
         checkOut: booking.checkOut,
         confirmationCode: booking.confirmationCode,
+        idUploadUrl,
       }),
     });
     leaseEmailSent = true;
@@ -237,4 +258,113 @@ module.exports = async function handler(req, res) {
     checkinEmail: checkinEmailSentNow ? "sent" : "scheduled",
     leaseEmailSent,
   });
-};
+}
+
+// =========================================================================
+// action=upload-id (POST) -- guest uploads the front of their
+// government-issued ID, after the lease is signed
+// =========================================================================
+async function handleUploadId(req, res) {
+  const { confirmationCode, idImageBase64 } = req.body || {};
+  if (!confirmationCode || !idImageBase64) {
+    return res.status(400).json({ error: "confirmationCode and idImageBase64 are required." });
+  }
+
+  let booking;
+  try {
+    booking = await getBooking(confirmationCode);
+  } catch (e) {
+    console.error("upload-id lookup failed for", confirmationCode, e.message);
+    return res.status(500).json({ error: "Could not look up booking." });
+  }
+  if (!booking) return res.status(404).json({ error: "Booking not found." });
+
+  if (!booking.leaseSignedAt) {
+    return res.status(409).json({ error: "Please sign your lease before uploading your ID." });
+  }
+
+  // Idempotency: a double-submit shouldn't create two Drive uploads.
+  if (booking.govIdUploadedAt) {
+    return res.status(200).json({
+      confirmationCode,
+      govIdUploadedAt: booking.govIdUploadedAt,
+      driveFileUrl: booking.govIdDriveFileUrl,
+      alreadyUploaded: true,
+    });
+  }
+
+  // ---- Decode the ID image ----
+  // Accepts whatever image/* data URL the browser produced (JPEG from a
+  // phone camera, PNG from a file picker, etc.) -- captures both the
+  // mimeType and the raw bytes so the Drive upload and the file extension
+  // match what the guest actually sent.
+  let idImageBytes, mimeType, extension;
+  try {
+    const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/.exec(idImageBase64);
+    if (!match) throw new Error("expected a data:image/...;base64, URL");
+    mimeType = match[1];
+    idImageBytes = Buffer.from(match[2], "base64");
+    if (idImageBytes.length === 0) throw new Error("empty image data");
+    extension = mimeType.split("/")[1] === "jpeg" ? "jpg" : mimeType.split("/")[1];
+  } catch (e) {
+    return res.status(400).json({ error: "Invalid idImageBase64 -- expected a base64-encoded image. " + e.message });
+  }
+
+  // ---- Upload to Google Drive (same folder as signed leases) ----
+  let driveResult = { fileId: null, fileUrl: null };
+  let driveError = null;
+  if (driveConfigured()) {
+    try {
+      const filename = `Gov ID - ${confirmationCode} - ${booking.guestName || "Guest"}.${extension}`;
+      driveResult = await uploadSignedLease(idImageBytes, filename, mimeType);
+    } catch (e) {
+      const apiDetail = e.response && e.response.data ? JSON.stringify(e.response.data) : (e.errors ? JSON.stringify(e.errors) : null);
+      driveError = e.message;
+      console.error(
+        "CRITICAL: Google Drive upload failed for government ID,", confirmationCode, ":", e.message,
+        apiDetail ? "| API detail: " + apiDetail : "| (no further API detail on this error)"
+      );
+    }
+  } else {
+    driveError = "Google Drive is not configured.";
+    console.error("Google Drive is not configured -- government ID for", confirmationCode, "was received but NOT archived.");
+  }
+
+  const uploadedAt = new Date().toISOString();
+
+  try {
+    await updateBookingStatus(confirmationCode, {
+      govIdUploadedAt: uploadedAt,
+      govIdDriveFileId: driveResult.fileId,
+      govIdDriveFileUrl: driveResult.fileUrl,
+    });
+  } catch (e) {
+    console.error("CRITICAL: government ID processed but booking record not updated:", confirmationCode, e.message);
+    return res.status(500).json({
+      error: "Your ID was received, but we had trouble saving it. Please contact risefurnishedstays@gmail.com to confirm.",
+    });
+  }
+
+  // ---- Notify the owner ----
+  try {
+    const driveStatusHtml = driveResult.fileUrl
+      ? `<p><a href="${driveResult.fileUrl}">View ID in Drive</a></p>`
+      : `<p style="color:#b3261e; font-weight:bold;">GOOGLE DRIVE UPLOAD FAILED for this ID -- it is NOT archived in the Signed Leases folder. Check server logs for the underlying error.</p>`;
+    await sendEmail({
+      to: "risefurnishedstays@gmail.com",
+      subject: driveResult.fileUrl
+        ? `Government ID received: ${confirmationCode} (${unitDisplayName(booking.unitCode)})`
+        : `ACTION NEEDED - Drive upload failed for government ID ${confirmationCode}`,
+      html: `<p>${(booking.guestName || "Guest")} uploaded their government ID for confirmation ${confirmationCode}.</p>` + driveStatusHtml,
+    });
+  } catch (e) {
+    console.error("Owner ID-uploaded notification failed (non-fatal) for", confirmationCode, e.message);
+  }
+
+  return res.status(200).json({
+    confirmationCode,
+    govIdUploadedAt: uploadedAt,
+    driveFileUrl: driveResult.fileUrl,
+    driveError,
+  });
+}
