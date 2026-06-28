@@ -178,10 +178,15 @@
 
   function money(n) { return "$" + Number(n).toLocaleString("en-US"); }
 
-  function branchLabel(branch) {
+  function branchLabel(branch, midstayRule) {
     if (branch === "full-refund") return "Full refund";
     if (branch === "non-refundable") return "Non-refundable";
-    if (branch === "midstay") return "Mid-stay liability";
+    if (branch === "midstay") {
+      if (midstayRule === 1) return "Mid-stay — termination fee";
+      if (midstayRule === 2) return "Mid-stay — last payment kept";
+      if (midstayRule === 3) return "Mid-stay — final payment due";
+      return "Mid-stay";
+    }
     return branch;
   }
 
@@ -237,7 +242,7 @@
 
   function renderPreview(booking, outcome) {
     const previewCard = document.getElementById("previewCard");
-    const pill = '<span class="branch-pill ' + outcome.branch + '">' + branchLabel(outcome.branch) + '</span>';
+    const pill = '<span class="branch-pill ' + outcome.branch + '">' + branchLabel(outcome.branch, outcome.midstayRule) + '</span>';
 
     let outcomeLine = "";
     if (outcome.branch === "full-refund") {
@@ -250,14 +255,23 @@
         '<div class="field-row"><span class="k">Refund amount</span><span class="v">' + money(outcome.refundAmount) + '</span></div>' +
         '<div class="field-row"><span class="k">&nbsp;&nbsp;— rent</span><span class="v">$0 (non-refundable)</span></div>' +
         '<div class="field-row"><span class="k">&nbsp;&nbsp;— cleaning + pet fees</span><span class="v">' + money(outcome.feeRefund) + ' (refunded)</span></div>';
-    } else {
+    } else if (outcome.midstayRule === 1) {
       outcomeLine =
-        '<div class="field-row"><span class="k">Guest liable through</span><span class="v">' + outcome.liabilityEndDate + '</span></div>' +
-        '<div class="field-row"><span class="k">Liable nights</span><span class="v">' + outcome.liableNights + '</span></div>';
+        '<div class="field-row"><span class="k">Early termination fee</span><span class="v">' + money(outcome.terminationFee) + '</span></div>' +
+        (outcome.unusedNightsCredit ? '<div class="field-row"><span class="k">&nbsp;&nbsp;— credit applied</span><span class="v">' + money(outcome.unusedNightsCredit) + ' (' + outcome.unusedNights + ' unused nights)</span></div>' : '') +
+        (outcome.unpaidUsedNightsDue ? '<div class="field-row"><span class="k">Also due (unpaid period)</span><span class="v">' + money(outcome.unpaidUsedNightsDue) + '</span></div>' : '');
+    } else if (outcome.midstayRule === 2) {
+      outcomeLine =
+        '<div class="field-row"><span class="k">Termination fee</span><span class="v">$0</span></div>' +
+        '<div class="field-row"><span class="k">Last payment</span><span class="v">Kept (not refunded)</span></div>';
+    } else if (outcome.midstayRule === 3) {
+      outcomeLine =
+        '<div class="field-row"><span class="k">Termination fee</span><span class="v">$0</span></div>' +
+        '<div class="field-row"><span class="k">Final payment due</span><span class="v">' + money(outcome.finalPaymentDue) + '</span></div>';
     }
 
-    const dangerNote = outcome.branch === "midstay"
-      ? '<div class="banner danger">Mid-stay cancellation: this only voids future Stripe invoices. It does NOT create a new charge for any partial period owed beyond what\'s already been billed. Review manually before confirming.</div>'
+    const midstayNote = outcome.branch === "midstay"
+      ? '<div class="banner warn">Mid-stay cancellation: any termination fee or final payment due above will be charged automatically to the card on file when you confirm. Future not-yet-owed installments are voided.</div>'
       : "";
 
     previewCard.innerHTML =
@@ -269,7 +283,7 @@
       '<div class="field-row"><span class="k">Check-out</span><span class="v">' + booking.checkOut + '</span></div>' +
       outcomeLine +
       '<p class="muted" style="margin-top:12px;">' + outcome.message + '</p>' +
-      dangerNote +
+      midstayNote +
       '<button class="btn-danger" id="confirmBtn" style="margin-top:8px;">Cancel &amp; ' +
         (outcome.refundable ? "Refund" : "Process") + '</button>' +
       '<button class="btn-secondary" id="cancelPreviewBtn" style="margin-top:8px; margin-left:8px;">Never mind</button>';
@@ -283,11 +297,16 @@
 
   async function onConfirmCancel() {
     const confirmBtn = document.getElementById("confirmBtn");
+    const totalDueNow = (currentOutcome.terminationFee || 0) + (currentOutcome.unpaidUsedNightsDue || 0) + (currentOutcome.finalPaymentDue || 0);
+    const billingNote = currentOutcome.branch === "midstay" && totalDueNow > 0
+      ? "charge " + money(totalDueNow) + " to the guest's card on file and "
+      : "";
     const sure = confirm(
       "This will " +
       (currentOutcome.refundable
         ? "issue a real Stripe refund of " + money(currentOutcome.refundAmount) + " and "
         : "") +
+      billingNote +
       "permanently cancel booking " + currentConfCode + ". This cannot be undone. Continue?"
     );
     if (!sure) return;
@@ -322,25 +341,34 @@
         emailStatusHtml += '</div>';
       }
 
-      const liabilityButtonHtml = data.status === "cancelled-midstay"
-        ? '<button class="btn-danger" id="chargeLiabilityBtn" style="margin-top:12px;">Charge for liability period (' + money(currentOutcome.liabilityAmount) + ')</button>' +
-          '<p class="muted" style="margin-top:6px;">This sends the guest a Stripe invoice for ' + currentOutcome.liableNights + ' nights. Their card is NOT auto-charged -- they must pay via the link Stripe sends them.</p>'
-        : '';
+      const amountOwed = (currentOutcome.terminationFee || 0) + (currentOutcome.unpaidUsedNightsDue || 0) + (currentOutcome.finalPaymentDue || 0);
+      let billingStatusHtml = '';
+      let retryButtonHtml = '';
+      if (data.status === "cancelled-midstay" && amountOwed > 0) {
+        if (data.billingError) {
+          billingStatusHtml = '<div class="banner danger">Automatic billing of ' + money(amountOwed) + ' FAILED: ' + data.billingError + '</div>';
+          retryButtonHtml = '<button class="btn-danger" id="chargeLiabilityBtn" style="margin-top:12px;">Retry: send invoice for ' + money(amountOwed) + '</button>' +
+            '<p class="muted" style="margin-top:6px;">This sends the guest a Stripe invoice instead. Their card is NOT auto-charged -- they must pay via the link Stripe sends them.</p>';
+        } else {
+          billingStatusHtml = '<div class="banner ok">' + money(amountOwed) + ' was charged automatically to the guest\'s card on file' + (data.billedInvoiceId ? ' (invoice ' + data.billedInvoiceId + ')' : '') + '.</div>';
+        }
+      }
 
       actionResult.innerHTML =
         '<div class="card">' +
         '<div class="banner ok">Done. Booking ' + data.confirmationCode + ' is now "' + data.status + '".</div>' +
         '<div class="field-row"><span class="k">Refund ID</span><span class="v">' + (data.refundId || "—") + '</span></div>' +
         '<div class="field-row"><span class="k">Invoices voided</span><span class="v">' + (data.voidedInvoiceIds.length ? data.voidedInvoiceIds.join(", ") : "—") + '</span></div>' +
+        billingStatusHtml +
         emailStatusHtml +
-        liabilityButtonHtml +
+        retryButtonHtml +
         '<p class="muted">Airbnb will unblock the dates on its next calendar sync (usually within a few hours) — this does not push instantly.</p>' +
         '</div>';
 
       document.getElementById("previewCard").classList.add("hidden");
 
-      if (data.status === "cancelled-midstay") {
-        document.getElementById("chargeLiabilityBtn").addEventListener("click", onChargeLiability);
+      if (retryButtonHtml) {
+        document.getElementById("chargeLiabilityBtn").addEventListener("click", () => onChargeLiability(amountOwed));
       }
     } catch (e) {
       actionResult.innerHTML = '<div class="card"><div class="banner danger">Network error: ' + e.message + '</div></div>';
@@ -349,11 +377,11 @@
     }
   }
 
-  async function onChargeLiability() {
+  async function onChargeLiability(amountOwed) {
     const btn = document.getElementById("chargeLiabilityBtn");
     const sure = confirm(
-      "This will create a Stripe invoice for " + money(currentOutcome.liabilityAmount) +
-      " (" + currentOutcome.liableNights + " nights) and email it to the guest. " +
+      "This will create a Stripe invoice for " + money(amountOwed) +
+      " and email it to the guest. " +
       "Their saved card will NOT be auto-charged -- they must pay via the link. Continue?"
     );
     if (!sure) return;
@@ -372,17 +400,17 @@
       if (!res.ok) {
         btn.insertAdjacentHTML("afterend", '<div class="banner danger" style="margin-top:10px;">Failed: ' + (data.error || "Unknown error") + '</div>');
         btn.disabled = false;
-        btn.textContent = "Charge for liability period (" + money(currentOutcome.liabilityAmount) + ")";
+        btn.textContent = "Retry: send invoice for " + money(amountOwed);
         return;
       }
 
       btn.outerHTML =
-        '<div class="banner ok">Invoice sent. ' + money(data.amount) + ' for ' + data.liableNights + ' nights.</div>' +
+        '<div class="banner ok">Invoice sent for ' + money(data.amount) + '.</div>' +
         '<p class="muted"><a href="' + data.hostedInvoiceUrl + '" target="_blank" rel="noopener">View/share the hosted invoice link</a></p>';
     } catch (e) {
       btn.insertAdjacentHTML("afterend", '<div class="banner danger" style="margin-top:10px;">Network error: ' + e.message + '</div>');
       btn.disabled = false;
-      btn.textContent = "Charge for liability period (" + money(currentOutcome.liabilityAmount) + ")";
+      btn.textContent = "Retry: send invoice for " + money(amountOwed);
     }
   }
 </script>
