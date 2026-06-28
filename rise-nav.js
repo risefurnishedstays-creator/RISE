@@ -256,3 +256,111 @@
     if (m.matches) close();
   });
 })();
+
+/* RISE — booking-stage step strip.
+   Shows the guest where they are in the booking flow: Select Dates and Unit
+   > Book > Pay > Sign Lease > Confirmation & Send ID. Injected right below
+   the header on every flow page; pages outside the flow (home, legal pages,
+   guidebook, contact) are left untouched. Self-contained IIFE so a failure
+   here can never affect the mobile nav drawer above. */
+(function () {
+  'use strict';
+
+  var STEPS = [
+    { key: 'select', label: 'Select Dates & Unit' },
+    { key: 'book', label: 'Book' },
+    { key: 'pay', label: 'Pay' },
+    { key: 'sign', label: 'Sign Lease' },
+    { key: 'confirm', label: 'Confirmation & Send ID' }
+  ];
+
+  // Map each flow page to the step key(s) that are "current" on that page.
+  // checkout.html covers both Book (guest details) and Pay (Stripe) in one
+  // page, so both light up there.
+  var PAGE_STEPS = {
+    'unit-a.html': ['select'],
+    'unit-b.html': ['select'],
+    'unit-d.html': ['select'],
+    'checkout.html': ['book', 'pay'],
+    'lease.html': ['sign'],
+    'confirmation.html': ['confirm']
+  };
+
+  var file = (window.location.pathname.split('/').pop() || 'index.html');
+  var activeKeys = PAGE_STEPS[file];
+  if (!activeKeys) return; // not a booking-flow page -- do nothing
+
+  var header = document.querySelector('header.nav');
+  if (!header) return;
+
+  var firstActiveIdx = STEPS.length, lastActiveIdx = -1;
+  STEPS.forEach(function (s, i) {
+    if (activeKeys.indexOf(s.key) === -1) return;
+    if (i < firstActiveIdx) firstActiveIdx = i;
+    if (i > lastActiveIdx) lastActiveIdx = i;
+  });
+
+  var css = '\n'
+    + '.rise-stepstrip { position: sticky; top: 0; z-index: 49; background: var(--paper-2); border-bottom: 2px solid var(--line); padding: 10px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }\n'
+    + '.rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 2px; max-width: 1120px; margin: 0 auto; padding: 0 18px; font-family: ui-monospace, \'SF Mono\', Menlo, monospace; font-size: 11px; letter-spacing: .04em; white-space: nowrap; min-width: max-content; }\n'
+    + '.rise-step { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 7px; color: var(--ink-soft); }\n'
+    + '.rise-step .num { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 1.5px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-size: 9.5px; }\n'
+    + '.rise-step.done { color: var(--ink); }\n'
+    + '.rise-step.done .num { background: var(--ink); border-color: var(--ink); color: var(--paper); }\n'
+    + '.rise-step.current { color: #fff; background: var(--accent); font-weight: 700; }\n'
+    + '.rise-step.current .num { border-color: #fff; }\n'
+    + '.rise-step-sep { color: var(--ink-soft); opacity: .45; padding: 0 1px; }\n'
+    + '@media (max-width: 640px) { .rise-stepstrip-inner { font-size: 10px; justify-content: flex-start; } .rise-step { padding: 5px 7px; } }\n';
+
+  var style = document.createElement('style');
+  style.textContent = css;
+  document.head.appendChild(style);
+
+  var html = '<div class="rise-stepstrip-inner">' + STEPS.map(function (s, i) {
+    var cls = 'rise-step';
+    var isActive = activeKeys.indexOf(s.key) !== -1;
+    if (isActive) cls += ' current';
+    else if (i < firstActiveIdx) cls += ' done';
+    var marker = (!isActive && i < firstActiveIdx)
+      ? '<span class="num">\u2713</span>'
+      : '<span class="num">' + (i + 1) + '</span>';
+    var sep = i < STEPS.length - 1 ? '<span class="rise-step-sep">&rsaquo;</span>' : '';
+    return '<span class="' + cls + '">' + marker + s.label + '</span>' + sep;
+  }).join('') + '</div>';
+
+  var strip = document.createElement('nav');
+  strip.className = 'rise-stepstrip';
+  strip.setAttribute('aria-label', 'Booking progress');
+  strip.innerHTML = html;
+  header.insertAdjacentElement('afterend', strip);
+
+  // On narrow screens the strip scrolls horizontally -- make sure the
+  // CURRENT step is actually visible on load rather than always starting
+  // scrolled to step 1 (which would hide the active step entirely on
+  // pages later in the flow, like lease.html or confirmation.html).
+  var currentEl = strip.querySelector('.rise-step.current');
+  if (currentEl) {
+    currentEl.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
+
+  // Sticky pages (unit pages' booking card, checkout's order summary) anchor
+  // to a hardcoded `top` calibrated to the header's height alone. Now that
+  // the strip adds height below the header, bump any sticky element that
+  // was anchored just below the header by the strip's real measured height,
+  // so it lands right under the strip instead of overlapping it.
+  function adjustStickyOffsets() {
+    var headerH = header.getBoundingClientRect().height;
+    strip.style.top = headerH + 'px';
+    var stripH = strip.getBoundingClientRect().height;
+    document.querySelectorAll('.abnb-card, .summary').forEach(function (el) {
+      var cs = window.getComputedStyle(el);
+      if (cs.position !== 'sticky') return;
+      el.style.top = (headerH + stripH + 8) + 'px';
+    });
+  }
+  // header is also sticky and may change height across breakpoints (rise-nav.js
+  // resizes it on mobile), so recompute after layout settles and on resize.
+  window.addEventListener('load', adjustStickyOffsets);
+  window.addEventListener('resize', adjustStickyOffsets);
+  setTimeout(adjustStickyOffsets, 0);
+})();
