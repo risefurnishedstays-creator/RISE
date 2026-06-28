@@ -114,8 +114,8 @@ async function handlePreview(req, res) {
     return res.status(200).json({ booking, alreadyCancelled: true });
   }
 
-  const lastPaymentPaid = await determineLastPaymentPaid(booking, noticeDate);
-  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid);
+  const { lastPaymentPaid, finalPeriodPaid } = await determinePaymentStatus(booking, noticeDate);
+  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid);
   return res.status(200).json({ booking, outcome, alreadyCancelled: false });
 }
 
@@ -123,13 +123,37 @@ async function handlePreview(req, res) {
 // always matches what actually gets charged when they confirm -- both call
 // this the same way, with the same notice date, right before calling
 // cancellationOutcome().
-async function determineLastPaymentPaid(booking, noticeDate) {
+//
+// Returns both pieces of payment-status info cancellationOutcome() needs:
+//   lastPaymentPaid  -- status of the period the NOTICE date falls in
+//   finalPeriodPaid  -- status of the TRUE final period (the one ending
+//                        at checkout), which can differ from the notice
+//                        period whenever the stay's last period is shorter
+//                        than 30 nights (e.g. a 65-night stay = 30+30+5 --
+//                        notice can fall in the middle 30-night period
+//                        while still being within 30 days of checkout,
+//                        which is governed by the trailing 5-night period)
+async function determinePaymentStatus(booking, noticeDate) {
   const notice = noticeDate ? new Date(noticeDate) : new Date();
   notice.setHours(0, 0, 0, 0);
   const checkInDate = new Date(booking.checkIn + "T00:00:00");
-  if (notice < checkInDate) return null; // not a midstay cancellation -- irrelevant
-  const period = findPaymentPeriod(booking.checkIn, booking.checkOut, notice);
-  return isPeriodPaid(booking, period);
+  if (notice < checkInDate) return { lastPaymentPaid: null, finalPeriodPaid: null }; // not a midstay cancellation -- irrelevant
+
+  const checkOutDate = new Date(booking.checkOut + "T00:00:00");
+  const noticeLookup = notice < checkOutDate ? notice : new Date(checkOutDate.getTime() - 86400000);
+  const period = findPaymentPeriod(booking.checkIn, booking.checkOut, noticeLookup);
+
+  const finalLookup = new Date(checkOutDate.getTime() - 86400000);
+  const finalPeriod = findPaymentPeriod(booking.checkIn, booking.checkOut, finalLookup) || period;
+
+  const lastPaymentPaid = await isPeriodPaid(booking, period);
+  // Avoid a second identical Stripe lookup when notice already IS in the
+  // final period -- they're the same period, so the same answer applies.
+  const finalPeriodPaid = (period && finalPeriod && period.index === finalPeriod.index)
+    ? lastPaymentPaid
+    : await isPeriodPaid(booking, finalPeriod);
+
+  return { lastPaymentPaid, finalPeriodPaid };
 }
 
 // =========================================================================
@@ -156,8 +180,8 @@ async function handleCancel(req, res) {
     return res.status(409).json({ error: "Booking is already cancelled.", booking });
   }
 
-  const lastPaymentPaid = await determineLastPaymentPaid(booking, noticeDate);
-  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid);
+  const { lastPaymentPaid, finalPeriodPaid } = await determinePaymentStatus(booking, noticeDate);
+  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid);
 
   // ---- Stripe: refund (if applicable -- only the pre-arrival branches) ----
   let refund = null;
@@ -226,19 +250,22 @@ async function handleCancel(req, res) {
     }
   }
 
-  // ---- Stripe: bill the midstay termination fee (Rule 1) or the final
-  // installment in full (Rule 3) right now, rather than waiting on a
-  // separate manual "charge" step -- both are deterministic, known amounts
-  // the moment the cancellation itself is processed. For Rule 1, if the
-  // guest's current payment period hadn't actually been charged yet,
-  // unpaidUsedNightsDue is added as a second line item on the same
-  // invoice, covering the nights they did stay in that unpaid period. ----
+  // ---- Stripe: bill the midstay termination fee (Rule 1), the final
+  // installment in full (Rule 3), or nothing extra (Rule 2) right now,
+  // rather than waiting on a separate manual "charge" step -- these are
+  // deterministic, known amounts the moment cancellation is processed.
+  // unpaidUsedNightsDue can apply under ANY of the three rules -- it
+  // covers an earlier, still-unpaid period's already-used nights, which
+  // is a distinct gap from whatever each rule itself bills (see
+  // cancellationOutcome()'s comments in lib/pricing.js for when this
+  // arises under Rules 2/3 specifically: a short final period). ----
   let billedInvoice = null;
   let billingError = null;
   const unpaidUsedNightsDue = outcome.unpaidUsedNightsDue || 0;
-  const amountToBillNow = outcome.branch === "midstay"
-    ? (outcome.midstayRule === 1 ? outcome.terminationFee + unpaidUsedNightsDue : (outcome.midstayRule === 3 ? outcome.finalPaymentDue : 0))
-    : 0;
+  const ruleAmount = outcome.midstayRule === 1 ? outcome.terminationFee
+    : outcome.midstayRule === 3 ? outcome.finalPaymentDue
+    : 0; // Rule 2 itself bills nothing -- the already-collected final payment is simply kept
+  const amountToBillNow = outcome.branch === "midstay" ? ruleAmount + unpaidUsedNightsDue : 0;
 
   if (amountToBillNow > 0) {
     if (!booking.stripeCustomerId) {
@@ -246,27 +273,22 @@ async function handleCancel(req, res) {
       console.error("CRITICAL:", billingError, confirmationCode);
     } else {
       try {
-        if (outcome.midstayRule === 1) {
+        if (ruleAmount > 0) {
           await stripe.invoiceItems.create({
             customer: booking.stripeCustomerId,
-            amount: outcome.terminationFee * 100,
+            amount: ruleAmount * 100,
             currency: "usd",
-            description: "RISE Furnished Stays — early termination fee",
+            description: outcome.midstayRule === 1
+              ? "RISE Furnished Stays — early termination fee"
+              : "RISE Furnished Stays — final installment (due in full per cancellation policy)",
           });
-          if (unpaidUsedNightsDue > 0) {
-            await stripe.invoiceItems.create({
-              customer: booking.stripeCustomerId,
-              amount: unpaidUsedNightsDue * 100,
-              currency: "usd",
-              description: `RISE Furnished Stays — rent for nights already stayed in current (unpaid) period`,
-            });
-          }
-        } else {
+        }
+        if (unpaidUsedNightsDue > 0) {
           await stripe.invoiceItems.create({
             customer: booking.stripeCustomerId,
-            amount: amountToBillNow * 100,
+            amount: unpaidUsedNightsDue * 100,
             currency: "usd",
-            description: `RISE Furnished Stays — final installment (due in full per cancellation policy)`,
+            description: `RISE Furnished Stays — rent for nights already stayed in an unpaid period`,
           });
         }
 
@@ -276,11 +298,15 @@ async function handleCancel(req, res) {
           auto_advance: true,
           metadata: {
             confirmationCode,
-            reason: outcome.midstayRule === 1 ? "midstay-termination-fee" : "midstay-final-installment",
+            reason: ruleAmount > 0
+              ? (outcome.midstayRule === 1 ? "midstay-termination-fee" : "midstay-final-installment")
+              : "midstay-unpaid-period-gap",
           },
-          description: outcome.midstayRule === 1
-            ? "RISE Furnished Stays — early termination fee"
-            : "RISE Furnished Stays — final installment (due in full per cancellation policy)",
+          description: ruleAmount > 0
+            ? (outcome.midstayRule === 1
+                ? "RISE Furnished Stays — early termination fee"
+                : "RISE Furnished Stays — final installment (due in full per cancellation policy)")
+            : "RISE Furnished Stays — rent for nights already stayed in an unpaid period",
         });
         billedInvoice = await stripe.invoices.finalizeInvoice(billedInvoice.id);
       } catch (e) {
@@ -411,9 +437,10 @@ async function handleChargeLiability(req, res) {
     });
   }
 
-  const amount = (booking.midstayRule === 1
-    ? (booking.terminationFee || 0) + (booking.unpaidUsedNightsDue || 0)
-    : booking.finalPaymentDue) || 0;
+  const ruleAmount = booking.midstayRule === 1 ? (booking.terminationFee || 0)
+    : booking.midstayRule === 3 ? (booking.finalPaymentDue || 0)
+    : 0; // Rule 2 itself bills nothing
+  const amount = ruleAmount + (booking.unpaidUsedNightsDue || 0);
   if (amount <= 0) {
     return res.status(400).json({ error: "This booking has no recorded termination fee or final payment due to invoice." });
   }
@@ -422,9 +449,11 @@ async function handleChargeLiability(req, res) {
     return res.status(400).json({ error: "No Stripe customer is on file for this booking -- cannot send an invoice." });
   }
 
-  const description = booking.midstayRule === 1
-    ? `RISE Furnished Stays — early termination fee`
-    : `RISE Furnished Stays — final installment (due in full per cancellation policy)`;
+  const description = ruleAmount > 0
+    ? (booking.midstayRule === 1
+        ? `RISE Furnished Stays — early termination fee`
+        : `RISE Furnished Stays — final installment (due in full per cancellation policy)`)
+    : `RISE Furnished Stays — rent for nights already stayed in an unpaid period`;
 
   let invoice;
   try {
@@ -442,7 +471,9 @@ async function handleChargeLiability(req, res) {
       auto_advance: true,
       metadata: {
         confirmationCode,
-        reason: booking.midstayRule === 1 ? "midstay-termination-fee" : "midstay-final-installment",
+        reason: ruleAmount > 0
+          ? (booking.midstayRule === 1 ? "midstay-termination-fee" : "midstay-final-installment")
+          : "midstay-unpaid-period-gap",
       },
       description,
     });

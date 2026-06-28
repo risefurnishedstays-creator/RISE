@@ -8,11 +8,21 @@
 // storage, the same source of truth the webhook and iCal feed use.
 //
 // GET /api/booking-by-session?session_id=cs_test_...
+// GET /api/booking-by-session?confirmation_code=ABC1234567
 //
 // confirmationCode is deterministically derived from the session id the
 // same way stripe-webhook.js does it (session.id.slice(-10).toUpperCase()),
 // so no new field needs to be added to the booking record and no Stripe
 // API call is needed here -- this only touches Redis.
+//
+// confirmation_code exists as a second way in, for links in reminder
+// emails sent days after the original checkout session -- the full Stripe
+// session_id from that session was never stored anywhere retrievable, only
+// its one-way-derived confirmationCode, so those emails (lease-signing and
+// ID-upload reminders) link to lease.html/id-upload.html with
+// ?confirmation_code=... instead of ?session_id=.... Both query params are
+// accepted by lease.html/id-upload.html themselves; whichever is present
+// is forwarded here as-is.
 
 const { getBooking } = require("../lib/bookings");
 const { priceParts } = require("../lib/pricing");
@@ -32,11 +42,12 @@ module.exports = async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
 
   const sessionId = (req.query && req.query.session_id || "").toString();
-  if (!sessionId) {
-    return res.status(400).json({ error: "session_id is required." });
+  const confirmationCodeParam = (req.query && req.query.confirmation_code || "").toString();
+  if (!sessionId && !confirmationCodeParam) {
+    return res.status(400).json({ error: "session_id or confirmation_code is required." });
   }
 
-  const confirmationCode = sessionId.slice(-10).toUpperCase();
+  const confirmationCode = sessionId ? sessionId.slice(-10).toUpperCase() : confirmationCodeParam.toUpperCase();
 
   let booking;
   try {

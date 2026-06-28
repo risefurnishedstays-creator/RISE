@@ -1,6 +1,6 @@
 // api/sign-lease.js
 //
-// Two related guest-facing actions, kept in one file to avoid spending a
+// Three related guest-facing actions, kept in one file to avoid spending a
 // second slot of Vercel's Hobby-plan 12-function limit (see api/ for the
 // current count -- there's exactly one free slot, and this avoids using it):
 //
@@ -14,10 +14,17 @@
 //   action=upload-id -- receives a photo of the guest's government-issued
 //   ID (front side), uploads it to the same Google Drive "Signed Leases"
 //   folder, and marks the booking's ID as received. Requires the lease to
-//   already be signed.
+//   already be signed. If this completes the booking (lease signed + ID
+//   uploaded), sends the one-time consolidated bookingCompleteEmail.
 //
-// POST /api/sign-lease                       body: { confirmationCode, signatureImageBase64 }
+//   action=defer-id -- the guest clicked "Upload ID later" on
+//   id-upload.html. Records idUploadDeferredAt and immediately sends an
+//   idUploadReminderEmail with a link back to the same upload page, so the
+//   guest has it on hand even before the weekly cron reminder kicks in.
+//
+// POST /api/sign-lease                       body: { confirmationCode, signatureImageBase64, sessionId }
 // POST /api/sign-lease?action=upload-id       body: { confirmationCode, idImageBase64 }
+// POST /api/sign-lease?action=defer-id        body: { confirmationCode, sessionId }
 
 const { getBooking, updateBookingStatus } = require("../lib/bookings");
 const { priceParts, checkinEmailTiming } = require("../lib/pricing");
@@ -25,7 +32,7 @@ const { buildLeaseText, buildPetAddendumText } = require("../lib/leaseTemplate")
 const { generateSignedLeasePdf } = require("../lib/leasePdf");
 const { uploadSignedLease, isConfigured: driveConfigured } = require("../lib/googleDrive");
 const { sendEmail } = require("../lib/sendEmail");
-const { checkinInstructionsEmail, unitCheckinPdfAttachment, unitDisplayName, leaseSignedGuestEmail } = require("../lib/emailTemplates");
+const { checkinInstructionsEmail, unitCheckinPdfAttachment, unitDisplayName, leaseSignedGuestEmail, bookingCompleteEmail, idUploadReminderEmail } = require("../lib/emailTemplates");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.risefurnishedstays.com");
@@ -37,6 +44,7 @@ module.exports = async function handler(req, res) {
 
   const action = (req.query && req.query.action || "sign").toString();
   if (action === "upload-id") return handleUploadId(req, res);
+  if (action === "defer-id") return handleDeferId(req, res);
   return handleSign(req, res);
 };
 
@@ -162,7 +170,12 @@ async function handleSign(req, res) {
   };
   let leaseEmailSent = false;
   const siteUrl = process.env.SITE_URL || "https://www.risefurnishedstays.com";
-  const idUploadUrl = sessionId ? `${siteUrl}/id-upload.html?session_id=${encodeURIComponent(sessionId)}` : null;
+  // Prefer session_id (works even if the guest re-lands via the original
+  // checkout link), but confirmation_code always works too -- see
+  // api/booking-by-session.js's header comment for why both exist.
+  const idUploadUrl = sessionId
+    ? `${siteUrl}/id-upload.html?session_id=${encodeURIComponent(sessionId)}`
+    : `${siteUrl}/id-upload.html?confirmation_code=${encodeURIComponent(confirmationCode)}`;
   try {
     await sendEmail({
       to: booking.guestEmail,
@@ -345,6 +358,31 @@ async function handleUploadId(req, res) {
     });
   }
 
+  // ---- Booking is now fully complete (paid + lease signed + ID uploaded)
+  // -- send the one-time consolidated confirmation, guarded by
+  // bookingCompleteEmailSent so a retried call never double-sends it. ----
+  let bookingCompleteEmailSentNow = false;
+  if (!booking.bookingCompleteEmailSent) {
+    try {
+      await sendEmail({
+        to: booking.guestEmail,
+        subject: `You're all set - RISE Furnished Stays (${confirmationCode})`,
+        replyTo: "risefurnishedstays@gmail.com",
+        html: bookingCompleteEmail({
+          guestName: booking.guestName,
+          unitCode: booking.unitCode,
+          checkIn: booking.checkIn,
+          checkOut: booking.checkOut,
+          confirmationCode: booking.confirmationCode,
+        }),
+      });
+      bookingCompleteEmailSentNow = true;
+      await updateBookingStatus(confirmationCode, { bookingCompleteEmailSent: true });
+    } catch (e) {
+      console.error("Booking-complete email failed (non-fatal) for", confirmationCode, e.message);
+    }
+  }
+
   // ---- Notify the owner ----
   try {
     const driveStatusHtml = driveResult.fileUrl
@@ -366,5 +404,67 @@ async function handleUploadId(req, res) {
     govIdUploadedAt: uploadedAt,
     driveFileUrl: driveResult.fileUrl,
     driveError,
+    bookingCompleteEmailSent: bookingCompleteEmailSentNow,
   });
+}
+
+// =========================================================================
+// action=defer-id (POST) -- guest clicked "Upload ID later" on
+// id-upload.html. No file is uploaded here -- just records the deferral
+// and sends an immediate reminder email with a link back to the same page.
+// =========================================================================
+async function handleDeferId(req, res) {
+  const { confirmationCode, sessionId, confirmationCodeParam } = req.body || {};
+  if (!confirmationCode) {
+    return res.status(400).json({ error: "confirmationCode is required." });
+  }
+
+  let booking;
+  try {
+    booking = await getBooking(confirmationCode);
+  } catch (e) {
+    console.error("defer-id lookup failed for", confirmationCode, e.message);
+    return res.status(500).json({ error: "Could not look up booking." });
+  }
+  if (!booking) return res.status(404).json({ error: "Booking not found." });
+
+  if (!booking.leaseSignedAt) {
+    return res.status(409).json({ error: "Please sign your lease before deferring your ID upload." });
+  }
+  if (booking.govIdUploadedAt) {
+    return res.status(409).json({ error: "Your ID has already been uploaded." });
+  }
+
+  try {
+    await updateBookingStatus(confirmationCode, { idUploadDeferredAt: new Date().toISOString() });
+  } catch (e) {
+    console.error("CRITICAL: could not record ID-upload deferral for", confirmationCode, e.message);
+    return res.status(500).json({ error: "Could not save your request. Please try again." });
+  }
+
+  const siteUrl = process.env.SITE_URL || "https://www.risefurnishedstays.com";
+  const idUploadUrl = sessionId
+    ? `${siteUrl}/id-upload.html?session_id=${encodeURIComponent(sessionId)}`
+    : `${siteUrl}/id-upload.html?confirmation_code=${encodeURIComponent(confirmationCodeParam || confirmationCode)}`;
+
+  try {
+    await sendEmail({
+      to: booking.guestEmail,
+      subject: `Upload your ID anytime before check-in - RISE Furnished Stays`,
+      replyTo: "risefurnishedstays@gmail.com",
+      html: idUploadReminderEmail({
+        guestName: booking.guestName,
+        unitCode: booking.unitCode,
+        confirmationCode: booking.confirmationCode,
+        idUploadUrl,
+        checkIn: booking.checkIn,
+        urgent: false,
+      }),
+    });
+  } catch (e) {
+    console.error("Defer-ID reminder email failed for", confirmationCode, e.message);
+    return res.status(502).json({ error: "Could not send the reminder email. Please try again, or email your ID directly to risefurnishedstays@gmail.com." });
+  }
+
+  return res.status(200).json({ confirmationCode, deferred: true });
 }
