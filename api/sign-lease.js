@@ -16,7 +16,7 @@ const { buildLeaseText, buildPetAddendumText } = require("../lib/leaseTemplate")
 const { generateSignedLeasePdf } = require("../lib/leasePdf");
 const { uploadSignedLease, isConfigured: driveConfigured } = require("../lib/googleDrive");
 const { sendEmail } = require("../lib/sendEmail");
-const { checkinInstructionsEmail, unitCheckinPdfAttachment, unitDisplayName } = require("../lib/emailTemplates");
+const { checkinInstructionsEmail, unitCheckinPdfAttachment, unitDisplayName, leaseSignedGuestEmail } = require("../lib/emailTemplates");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.risefurnishedstays.com");
@@ -116,10 +116,53 @@ module.exports = async function handler(req, res) {
       // Don't fail the whole signing flow over a Drive hiccup -- the
       // signature itself is still valid and recorded; just log loudly so
       // you know to retrieve/re-upload this one manually.
-      console.error("CRITICAL: Google Drive upload failed for", confirmationCode, ":", e.message);
+      //
+      // googleapis errors often bury the actually-useful detail (wrong
+      // folder ID, service account not shared on the folder, expired key,
+      // etc.) inside error.response.data or error.errors rather than in
+      // e.message, which just says something generic like "Forbidden" or
+      // "Not Found" -- log the richer detail when it's there so a Drive
+      // failure is actually diagnosable from Vercel logs instead of just
+      // "something went wrong."
+      const apiDetail = e.response && e.response.data ? JSON.stringify(e.response.data) : (e.errors ? JSON.stringify(e.errors) : null);
+      console.error(
+        "CRITICAL: Google Drive upload failed for", confirmationCode, ":", e.message,
+        apiDetail ? "| API detail: " + apiDetail : "| (no further API detail on this error)"
+      );
     }
   } else {
     console.error("Google Drive is not configured -- signed lease for", confirmationCode, "was generated but NOT archived. Set GOOGLE_SERVICE_ACCOUNT_KEY and GOOGLE_DRIVE_LEASES_FOLDER_ID.");
+  }
+
+  // ---- Email the signed lease to the guest, as a PDF attachment ----
+  // This does not depend on the Drive upload succeeding -- the PDF buffer
+  // is already in memory either way, so the guest gets their copy even if
+  // Drive archiving failed for some reason.
+  const leasePdfAttachment = {
+    filename: `Lease - ${confirmationCode}.pdf`,
+    content: pdfBuffer.toString("base64"),
+  };
+  let leaseEmailSent = false;
+  try {
+    await sendEmail({
+      to: booking.guestEmail,
+      subject: `Your signed lease - ${unitDisplayName(booking.unitCode)} (${confirmationCode})`,
+      replyTo: "risefurnishedstays@gmail.com",
+      attachments: [leasePdfAttachment],
+      html: leaseSignedGuestEmail({
+        guestName: booking.guestName,
+        unitCode: booking.unitCode,
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        confirmationCode: booking.confirmationCode,
+      }),
+    });
+    leaseEmailSent = true;
+  } catch (e) {
+    // Non-fatal: the signature itself is still valid and recorded. Log
+    // loudly so a missing guest email doesn't go unnoticed the way a
+    // missing Drive upload used to.
+    console.error("CRITICAL: lease-signed email to guest failed for", confirmationCode, ":", e.message);
   }
 
   // ---- Mark the booking signed, and decide check-in email timing ----
@@ -172,11 +215,16 @@ module.exports = async function handler(req, res) {
 
   // ---- Notify the owner ----
   try {
+    const driveStatusHtml = driveResult.fileUrl
+      ? `<p><a href="${driveResult.fileUrl}">View signed lease in Drive</a></p>`
+      : `<p style="color:#b3261e; font-weight:bold;">GOOGLE DRIVE UPLOAD FAILED for this lease -- it is NOT archived in the Signed Leases folder. The PDF is attached to this email instead; please save it manually. Check server logs for the underlying error.</p>`;
     await sendEmail({
       to: "risefurnishedstays@gmail.com",
-      subject: `Lease signed: ${confirmationCode} (${unitDisplayName(booking.unitCode)})`,
-      html: `<p>${(booking.guestName || "Guest")} signed the lease for confirmation ${confirmationCode}.</p>` +
-        (driveResult.fileUrl ? `<p><a href="${driveResult.fileUrl}">View signed lease in Drive</a></p>` : `<p style="color:#b3261e;">Google Drive upload failed -- check server logs and archive this lease manually.</p>`),
+      subject: driveResult.fileUrl
+        ? `Lease signed: ${confirmationCode} (${unitDisplayName(booking.unitCode)})`
+        : `ACTION NEEDED - Drive upload failed for signed lease ${confirmationCode}`,
+      attachments: [leasePdfAttachment],
+      html: `<p>${(booking.guestName || "Guest")} signed the lease for confirmation ${confirmationCode}.</p>` + driveStatusHtml,
     });
   } catch (e) {
     console.error("Owner lease-signed notification failed (non-fatal) for", confirmationCode, e.message);
@@ -187,5 +235,6 @@ module.exports = async function handler(req, res) {
     leaseSignedAt: signedAt,
     driveFileUrl: driveResult.fileUrl,
     checkinEmail: checkinEmailSentNow ? "sent" : "scheduled",
+    leaseEmailSent,
   });
 };
