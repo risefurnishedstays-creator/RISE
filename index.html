@@ -225,6 +225,35 @@
     .foot-grid { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 560px) { .foot-grid { grid-template-columns: 1fr; } }
+
+  /* AVAILABILITY SEARCH */
+  .avail-section { padding: 56px 0 8px; position: relative; z-index: 1; }
+  .avail-box { max-width: 1000px; margin: 0 auto; padding: 28px 32px; }
+  .avail-title { text-align: center; font-size: clamp(22px, 3vw, 30px); margin-bottom: 6px; }
+  .avail-sub { text-align: center; color: var(--ink-soft); font-size: 14.5px; margin-bottom: 22px; }
+  .avail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto auto; gap: 14px; align-items: end; }
+  .avail-field label { display: block; font-family: ui-monospace, monospace; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
+  .avail-field input, .avail-field select {
+    width: 100%; font-family: var(--font-body); font-size: 15px; padding: 11px 12px;
+    border: 2px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+  }
+  .avail-grid .btn { white-space: nowrap; padding: 11px 22px; }
+  .avail-err { color: #b3261e; font-size: 13.5px; text-align: center; margin-top: 14px; display: none; }
+  .avail-err.show { display: block; }
+  .avail-status { color: var(--ink-soft); font-size: 13.5px; text-align: center; margin-top: 14px; display: none; }
+  .avail-status.show { display: block; }
+
+  /* Cards hidden by the availability filter -- kept in the DOM (not removed)
+     so Clear can simply un-hide them without re-rendering from UNITS. */
+  .ucard.avail-hidden { display: none; }
+
+  @media (max-width: 900px) {
+    .avail-grid { grid-template-columns: 1fr 1fr; }
+    .avail-grid .btn { grid-column: span 1; }
+  }
+  @media (max-width: 560px) {
+    .avail-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -274,6 +303,48 @@
       <div class="hero-cta">
         <a class="btn accent" href="#units">See the homes ↓</a>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- AVAILABILITY SEARCH -->
+<div style="position:relative;z-index:1;padding:0 28px;"><div style="max-width:1120px;margin:32px auto 0;border-top:2px dashed color-mix(in oklab,var(--ink) 22%,transparent);"></div></div>
+<section class="avail-section">
+  <div class="wrap">
+    <div class="box avail-box">
+      <h2 class="avail-title">Check availability</h2>
+      <p class="avail-sub">Pick your dates and we'll show only the homes that are open — or clear your search to see all three again.</p>
+      <div class="avail-grid">
+        <div class="avail-field">
+          <label for="availCheckIn">Check-in</label>
+          <input type="date" id="availCheckIn" />
+        </div>
+        <div class="avail-field">
+          <label for="availCheckOut">Check-out</label>
+          <input type="date" id="availCheckOut" />
+        </div>
+        <div class="avail-field">
+          <label for="availGuests">Guests</label>
+          <select id="availGuests">
+            <option value="1">1 guest</option>
+            <option value="2">2 guests</option>
+            <option value="3">3 guests</option>
+            <option value="4" selected>4 guests</option>
+          </select>
+        </div>
+        <div class="avail-field">
+          <label for="availPets">Pets</label>
+          <select id="availPets">
+            <option value="0" selected>No pets</option>
+            <option value="1">1 pet</option>
+            <option value="2">2 pets</option>
+          </select>
+        </div>
+        <button class="btn accent" id="availCheckBtn" type="button">Check availability</button>
+        <button class="btn ghost" id="availClearBtn" type="button">Clear</button>
+      </div>
+      <p class="avail-err" id="availErr"></p>
+      <p class="avail-status" id="availStatus"></p>
     </div>
   </div>
 </section>
@@ -498,8 +569,10 @@
       desc: "Our highest-rated home — a perfect ★5.0 for location, and a favorite for longer stays.",
       img: "assets/unitD/01-living.avif" },
   ];
-  document.getElementById('cards').innerHTML = UNITS.map((u, i) => `
-    <a class="ucard box ${i%2?'alt':''}" href="${u.page}">
+  document.getElementById('cards').innerHTML = UNITS.map((u, i) => {
+    var shortCode = u.page.match(/unit-([a-z])\.html/i)[1].toUpperCase();
+    return `
+    <a class="ucard box ${i%2?'alt':''}" data-unit="${shortCode}" href="${u.page}">
       <div class="uphoto">
         <span class="ucode">${u.code}</span>
         ${u.petsOk ? '<span class="upet">🐾 Pet-friendly</span>' : ''}
@@ -514,7 +587,162 @@
           <span class="ubtn">View home →</span>
         </div>
       </div>
-    </a>`).join('');
+    </a>`;
+  }).join('');
+
+  // ---- Availability search: filters the existing unit cards in place ----
+  // Unlike a separate results panel, this hides/shows the SAME cards
+  // already rendered above -- nothing new is added to the page, and
+  // Clear simply un-hides whatever was hidden.
+  (function () {
+    var API_BASE = 'https://rise-eta-three.vercel.app'; // CHANGE THIS if your Vercel URL ever changes
+    var MIN_NIGHTS = 30;
+
+    var checkInEl = document.getElementById('availCheckIn');
+    var checkOutEl = document.getElementById('availCheckOut');
+    var guestsEl = document.getElementById('availGuests');
+    var petsEl = document.getElementById('availPets');
+    var checkBtn = document.getElementById('availCheckBtn');
+    var clearBtn = document.getElementById('availClearBtn');
+    var errEl = document.getElementById('availErr');
+    var statusEl = document.getElementById('availStatus');
+
+    if (!checkInEl || !checkBtn) return; // section not present on this render
+
+    function toKey(d) {
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function parseKey(s) {
+      var p = s.split('-');
+      return new Date(+p[0], +p[1] - 1, +p[2]);
+    }
+    function nightsBetween(a, b) {
+      return Math.round((b - a) / 86400000);
+    }
+    // Does [aFrom, aTo) overlap [bFrom, bTo)? Half-open interval overlap --
+    // a checkout date exactly matching another booking's check-in date is
+    // correctly treated as NOT overlapping (same-day turnover is allowed).
+    function rangesOverlap(aFrom, aTo, bFrom, bTo) {
+      return aFrom < bTo && bFrom < aTo;
+    }
+
+    var todayStr = toKey(new Date());
+    checkInEl.min = todayStr;
+    checkOutEl.min = todayStr;
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      errEl.classList.add('show');
+      statusEl.classList.remove('show');
+    }
+    function showStatus(msg) {
+      statusEl.textContent = msg;
+      statusEl.classList.add('show');
+      errEl.classList.remove('show');
+    }
+    function clearMessages() {
+      errEl.classList.remove('show');
+      statusEl.classList.remove('show');
+    }
+
+    function getAllCards() {
+      return Array.prototype.slice.call(document.querySelectorAll('.ucard'));
+    }
+
+    checkBtn.addEventListener('click', function () {
+      clearMessages();
+
+      var checkInStr = checkInEl.value;
+      var checkOutStr = checkOutEl.value;
+      var guests = parseInt(guestsEl.value, 10);
+      var pets = parseInt(petsEl.value, 10);
+
+      if (!checkInStr || !checkOutStr) {
+        showError('Please select both a check-in and check-out date.');
+        return;
+      }
+
+      var checkIn = parseKey(checkInStr);
+      var checkOut = parseKey(checkOutStr);
+      var nights = nightsBetween(checkIn, checkOut);
+
+      if (nights <= 0) {
+        showError('Check-out must be after check-in.');
+        return;
+      }
+      if (nights < MIN_NIGHTS) {
+        showError('Minimum stay is ' + MIN_NIGHTS + ' nights. Please choose a longer date range.');
+        return;
+      }
+
+      showStatus('Checking availability...');
+      checkBtn.disabled = true;
+
+      var unitCodeFromName = { 'Unit A': 'A', 'Unit B': 'B', 'Unit D': 'D' };
+
+      Promise.all(
+        UNITS.map(function (u) {
+          var code = unitCodeFromName[u.code];
+          if (pets > 0 && !u.petsOk) {
+            return Promise.resolve({ code: code, isFree: false });
+          }
+          return fetch(API_BASE + '/api/availability?unit=' + code)
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              var booked = data.booked || [];
+              var isFree = booked.every(function (range) {
+                return !rangesOverlap(checkIn, checkOut, parseKey(range.from), parseKey(range.to));
+              });
+              return { code: code, isFree: isFree };
+            })
+            .catch(function () {
+              return { code: code, isFree: true };
+            });
+        })
+      ).then(function (results) {
+        checkBtn.disabled = false;
+        var availableCodes = results.filter(function (r) { return r.isFree; }).map(function (r) { return r.code; });
+
+        var cards = getAllCards();
+        cards.forEach(function (card) {
+          var unit = card.getAttribute('data-unit');
+          if (availableCodes.indexOf(unit) === -1) {
+            card.classList.add('avail-hidden');
+          } else {
+            card.classList.remove('avail-hidden');
+            card.setAttribute('href', 'checkout.html?u=' + unit +
+              '&in=' + encodeURIComponent(checkInStr) +
+              '&out=' + encodeURIComponent(checkOutStr) +
+              '&g=' + guests + '&p=' + pets);
+          }
+        });
+
+        if (!availableCodes.length) {
+          showStatus('No homes are available for those dates. Try a different range, or clear your search.');
+        } else {
+          showStatus(availableCodes.length + ' of ' + UNITS.length + ' homes available for your dates.');
+        }
+
+        document.getElementById('book-stay').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    clearBtn.addEventListener('click', function () {
+      checkInEl.value = '';
+      checkOutEl.value = '';
+      guestsEl.value = '4';
+      petsEl.value = '0';
+      clearMessages();
+
+      var cards = getAllCards();
+      cards.forEach(function (card) {
+        card.classList.remove('avail-hidden');
+        var unit = card.getAttribute('data-unit');
+        var u = UNITS.filter(function (x) { return x.page.indexOf('unit-' + unit.toLowerCase()) !== -1; })[0];
+        if (u) card.setAttribute('href', u.page);
+      });
+    });
+  })();
 
   // ---- FAQ ----
   const FAQ = [
