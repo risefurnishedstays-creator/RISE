@@ -81,15 +81,15 @@
   footer.foot { background: var(--ink); color: var(--paper); padding: 26px 0; text-align: center; font-size: 13px; }
   footer.foot a { color: var(--accent); text-decoration: none; }
 
-  .rise-stepstrip { position: sticky; top: 0; z-index: 49; background: var(--paper-2); border-bottom: 2.5px solid var(--line); padding: 14px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 1120px; margin: 0 auto; padding: 0 18px; font-family: var(--font-body); font-size: 18px; white-space: nowrap; min-width: max-content; }
-  .rise-step { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: var(--radius-sketch); color: var(--ink-soft); border: 2px solid transparent; font-weight: 500; }
+  .rise-stepstrip { position: sticky; top: 0; z-index: 49; background: var(--ink); border-bottom: 2.5px solid var(--line); padding: 14px 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 10px; max-width: 1120px; margin: 0 auto; padding: 0 18px; font-family: var(--font-body); font-size: 18px; white-space: nowrap; min-width: max-content; }
+  .rise-step { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: var(--radius-sketch); color: var(--paper); border: 2px solid color-mix(in oklab, var(--paper) 38%, transparent); font-weight: 500; }
   .rise-step .num { width: 22px; height: 22px; flex: none; border-radius: 50%; border: 2px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; }
-  .rise-step.done { color: var(--ink); }
-  .rise-step.done .num { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-  .rise-step.current { color: #fff; background: var(--accent); border-color: var(--line); font-weight: 700; box-shadow: 3px 3px 0 var(--ink); }
+  .rise-step.done { border-color: var(--paper); }
+  .rise-step.done .num { background: var(--paper); border-color: var(--paper); color: var(--ink); }
+  .rise-step.current { background: var(--accent); border-color: var(--paper); font-weight: 700; box-shadow: 3px 3px 0 color-mix(in oklab, var(--paper) 55%, transparent); }
   .rise-step.current .num { border-color: #fff; }
-  .rise-step-sep { color: var(--ink-soft); opacity: .5; font-size: 20px; }
+  .rise-step-sep { color: var(--paper); opacity: .4; font-size: 20px; }
   @media (max-width: 640px) { .rise-stepstrip-inner { font-size: 16px; justify-content: flex-start; } .rise-step { padding: 7px 11px; } }
 </style>
 </head>
@@ -104,10 +104,9 @@
 <nav class="rise-stepstrip" aria-label="Booking progress">
   <div class="rise-stepstrip-inner">
     <span class="rise-step done"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&rsaquo;</span>
-    <span class="rise-step done"><span class="num">&#10003;</span>Book</span><span class="rise-step-sep">&rsaquo;</span>
-    <span class="rise-step done"><span class="num">&#10003;</span>Pay</span><span class="rise-step-sep">&rsaquo;</span>
-    <span class="rise-step current"><span class="num">4</span>Sign Lease</span><span class="rise-step-sep">&rsaquo;</span>
-    <span class="rise-step"><span class="num">5</span>Send ID and Complete Booking</span>
+    <span class="rise-step done"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&rsaquo;</span>
+    <span class="rise-step current"><span class="num">3</span>Sign Lease</span><span class="rise-step-sep">&rsaquo;</span>
+    <span class="rise-step"><span class="num">4</span>Send ID and Complete Booking</span>
   </div>
 </nav>
 <script>

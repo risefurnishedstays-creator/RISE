@@ -89,21 +89,21 @@
   .form-card h2 { font-size: 21px; margin-bottom: 18px; }
   .field { margin-bottom: 16px; }
   .field label { display: block; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 6px; }
-  .field input { width: 100%; font-family: var(--font-body); font-size: 16px; color: var(--ink); border: 2.5px solid var(--line); border-radius: 9px; background: var(--paper); padding: 11px 13px; }
+  .field input { width: 100%; font-family: var(--font-body); font-size: 16px; color: var(--ink); border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: var(--paper); padding: 11px 13px; }
   .field input:focus { outline: none; border-color: var(--accent); }
   .field input.invalid, .field textarea.invalid { border-color: var(--red); }
   .field .err { color: var(--red); font-size: 12.5px; margin-top: 5px; display: none; }
   .field .err.show { display: block; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
-  .field select, .field textarea { width: 100%; font-family: var(--font-body); font-size: 16px; color: var(--ink); border: 2.5px solid var(--line); border-radius: 9px; background: var(--paper); padding: 11px 13px; }
+  .field select, .field textarea { width: 100%; font-family: var(--font-body); font-size: 16px; color: var(--ink); border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: var(--paper); padding: 11px 13px; }
   .field select:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
   .field textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
 
   .summary { padding: 24px; box-shadow: 5px 6px 0 var(--ink); position: sticky; top: 90px; }
   .summary h2 { font-size: 19px; margin-bottom: 4px; }
   .summary .unit-line { color: var(--ink-soft); font-size: 14px; margin-bottom: 16px; }
-  .sum-dates { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; border: 2.5px solid var(--line); border-radius: 10px; padding: 11px 13px; margin-bottom: 18px; }
+  .sum-dates { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; border: 2.5px solid var(--line); border-radius: var(--radius-sketch-2); padding: 11px 13px; margin-bottom: 18px; }
   .sum-date { display: flex; flex-direction: column; gap: 2px; }
   .sum-date .l { font-family: ui-monospace, monospace; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
   .sum-date .v { font-size: 14px; font-weight: 600; }
@@ -113,7 +113,7 @@
   button.sum-date:hover .v { color: var(--accent); }
   button.sum-date.active { outline: 2.5px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
   .sum-edit-hint { font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); text-align: center; margin: -8px 0 16px; }
-  .cal-pop { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 70; background: var(--paper); border: 2.5px solid var(--line); border-radius: 13px; box-shadow: 5px 6px 0 var(--ink); padding: 14px; }
+  .cal-pop { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 70; background: var(--paper); border: 2.5px solid var(--line); border-radius: var(--radius-sketch); box-shadow: 5px 6px 0 var(--ink); padding: 14px; }
   .cal-pop[hidden] { display: none; }
   .cal-pop-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
   .cal-pop-month { font-family: var(--font-head); font-size: 16px; }
@@ -209,8 +209,7 @@
   <div id="checkoutState" style="display:none;">
     <div class="page-head">
       <a href="#" class="back-btn" id="backBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Back</a>
-      <div class="eyebrow">Secure checkout</div>
-      <h1>Confirm &amp; <span style="color:var(--accent);">pay</span></h1>
+      <h1>Book &amp; <span style="color:var(--accent);">Pay</span></h1>
     </div>
 
     <div class="grid">
