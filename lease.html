@@ -106,7 +106,8 @@
     <span class="rise-step done" style="transform: rotate(-2deg);"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&gt;</span>
     <span class="rise-step done" style="transform: rotate(1.5deg);"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&gt;</span>
     <span class="rise-step current" style="transform: rotate(-1.5deg);"><span class="num">3</span>Sign Lease</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step" style="transform: rotate(2deg);"><span class="num">4</span>Upload ID</span>
+    <span class="rise-step" style="transform: rotate(2deg);"><span class="num">4</span>Upload ID</span><span class="rise-step-sep">&gt;</span>
+    <span class="rise-step" style="transform: rotate(-2deg);"><span class="num">5</span>Confirmation</span>
   </div>
 </nav>
 <script>
@@ -139,8 +140,20 @@
 
   var params = new URLSearchParams(window.location.search);
   var sessionId = params.get('session_id');
+  var confirmationCodeParam = params.get('confirmation_code');
 
-  if (!sessionId) {
+  // Reminder emails sent days after checkout link with ?confirmation_code=
+  // instead of ?session_id=, since the original Stripe session id was
+  // never stored anywhere retrievable -- see api/booking-by-session.js's
+  // header comment for why. linkQuery is forwarded as-is to every other
+  // page/link on this page so whichever the guest arrived with keeps working.
+  var linkQuery = sessionId
+    ? 'session_id=' + encodeURIComponent(sessionId)
+    : confirmationCodeParam
+      ? 'confirmation_code=' + encodeURIComponent(confirmationCodeParam)
+      : null;
+
+  if (!linkQuery) {
     renderError('No booking session found. If you just completed checkout, check your email for confirmation.');
     return;
   }
@@ -153,7 +166,7 @@
 
   function fetchBooking(attempt) {
     attempt = attempt || 1;
-    fetch(API_BASE + '/api/booking-by-session?session_id=' + encodeURIComponent(sessionId))
+    fetch(API_BASE + '/api/booking-by-session?' + linkQuery)
       .then(function (res) {
         if (res.status === 404 && attempt < 5) {
           setTimeout(function () { fetchBooking(attempt + 1); }, 1200);
@@ -183,7 +196,7 @@
   function renderLease(booking) {
     if (booking.leaseSignedAt) {
       var nextUrl = booking.govIdUploadedAt ? 'confirmation.html' : 'id-upload.html';
-      window.location.href = nextUrl + '?session_id=' + encodeURIComponent(sessionId);
+      window.location.href = nextUrl + '?' + linkQuery;
       return;
     }
 
@@ -213,15 +226,90 @@
     renderLeaseScrollContent(booking);
     setUpScrollGate();
     setUpSignaturePad();
-    setUpSubmit(booking, sessionId);
+    setUpSubmit(booking);
+  }
+
+  // Escapes HTML-significant characters, then re-applies bold formatting on
+  // top of the now-safe text -- in that order, so nothing in the lease
+  // text itself (e.g. a guest's name) can inject markup. Only a fixed set
+  // of structural patterns get bolded: numbered/lettered clause headings,
+  // the "Label:" lines inside the cancellation clause and payment
+  // schedule, the document title/witness lines, and dollar amounts.
+  function formatLeaseHtml(rawText) {
+    var lines = escapeHtml(rawText).split('\n');
+    var inSchedule = false;
+
+    var formatted = lines.map(function (line) {
+      // Payment Schedule block: bold every line from "Payment Schedule:"
+      // through the line starting with "Total:" (inclusive), since the
+      // whole schedule -- not just its heading -- should stand out.
+      if (/^Payment Schedule:/.test(line)) {
+        inSchedule = true;
+        return '<b>' + line + '</b>';
+      }
+      if (inSchedule) {
+        var stillInSchedule = /^Total:/.test(line) === false;
+        var boldedLine = '<b>' + line + '</b>';
+        if (!stillInSchedule) inSchedule = false;
+        return boldedLine;
+      }
+
+      // Numbered clause headings, e.g. "1. Parties and Premises." or
+      // "24. Additional Clauses." or "5. Utility Bills/Service Contracts:"
+      // -- bolds just the heading phrase (ending at the first period OR
+      // colon), not any paragraph text that follows on the same line (e.g.
+      // "2. Term. Subject to the terms..." keeps "2. Term." bold and the
+      // rest plain).
+      var headingMatch = line.match(/^(\d{1,2}\.\s[^\n]*?[.:])(\s|$)/);
+      var matchedNumberedHeading = false;
+      if (headingMatch) {
+        matchedNumberedHeading = true;
+        line = '<b>' + headingMatch[1] + '</b>' + line.slice(headingMatch[1].length);
+      }
+
+      // Lettered/roman sub-clause markers at the start of a paragraph,
+      // e.g. "(A) Tenant shall..." or "(i) If Tenant gives notice..." --
+      // bolds just the marker so the structure is scannable without
+      // bolding entire paragraphs of legal text.
+      line = line.replace(/^(\([A-Za-z]+\))(\s)/, '<b>$1</b>$2');
+
+      // "Label:" lines at the start of a line, used by the cancellation
+      // clause's three sub-cases ("More than 30 days before check-in:",
+      // "30 days or fewer before check-in:", "After check-in (early
+      // termination):") -- bolds the label up to and including the colon.
+      // Starts with a letter OR digit since "30 days or fewer..." begins
+      // with a number. Skipped if a numbered heading already matched this
+      // line (e.g. "5. Utility Bills/Service Contracts:") -- that heading
+      // match already bolded its own colon-terminated title, and applying
+      // this rule on top would instead match the next colon much further
+      // into the paragraph, bolding far more than intended.
+      if (!matchedNumberedHeading) {
+        line = line.replace(/^([A-Za-z0-9][^\n:]{0,60}:)(\s)/, '<b>$1</b>$2');
+      }
+
+      // Document title and witness lines.
+      if (/^RESIDENTIAL LEASE AGREEMENT$/.test(line) || /^IN WITNESS WHEREOF/.test(line)) {
+        line = '<b>' + line + '</b>';
+      }
+
+      // Dollar amounts anywhere in the line, e.g. "$2,550" or "$150" --
+      // applied last so it also catches amounts inside text already
+      // partially bolded above (nested <b> tags render fine).
+      line = line.replace(/\$[\d,]+(?:\.\d{2})?/g, function (m) { return '<b>' + m + '</b>'; });
+
+      return line;
+    });
+
+    return formatted.join('\n');
   }
 
   function renderLeaseScrollContent(booking) {
     var el = document.getElementById('leaseScroll');
-    fetch(API_BASE + '/api/booking-by-session?session_id=' + encodeURIComponent(sessionId) + '&include=leaseText')
+    fetch(API_BASE + '/api/booking-by-session?' + linkQuery + '&include=leaseText')
       .then(function (res) { return res.json(); })
       .then(function (data) {
-        el.textContent = (data.leaseText || '') + (data.petAddendumText ? '\n\n\n' + data.petAddendumText : '');
+        var combined = (data.leaseText || '') + (data.petAddendumText ? '\n\n\n' + data.petAddendumText : '');
+        el.innerHTML = formatLeaseHtml(combined);
       })
       .catch(function () {
         el.textContent = 'We could not load the full lease text. Please refresh, or contact risefurnishedstays@gmail.com before signing.';
@@ -301,7 +389,7 @@
     submitBtn.disabled = !(agreed && scrolledToBottom && sigHasContent);
   }
 
-  function setUpSubmit(booking, sessionId) {
+  function setUpSubmit(booking) {
     document.getElementById('submitBtn').addEventListener('click', function () {
       var btn = this;
       var errEl = document.getElementById('signErr');
@@ -315,7 +403,7 @@
       fetch(API_BASE + '/api/sign-lease', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirmationCode: booking.confirmationCode, signatureImageBase64: signatureImageBase64, sessionId: sessionId }),
+        body: JSON.stringify({ confirmationCode: booking.confirmationCode, signatureImageBase64: signatureImageBase64, sessionId: sessionId, linkQuery: linkQuery }),
       })
         .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
         .then(function (result) {
@@ -326,7 +414,7 @@
             btn.textContent = 'Sign lease & continue';
             return;
           }
-          renderSuccess(sessionId);
+          renderSuccess();
         })
         .catch(function () {
           errEl.textContent = 'Network error -- please check your connection and try again.';
@@ -337,13 +425,13 @@
     });
   }
 
-  function renderSuccess(sessionId) {
+  function renderSuccess() {
     mount.innerHTML =
       '<div class="success-state">' +
         '<div class="success-badge">&#10003;</div>' +
         '<h2>Lease signed!</h2>' +
         '<p>Thanks -- your lease is complete. Last step: upload a photo of your ID to finish booking.</p>' +
-        '<a class="btn accent" href="id-upload.html?session_id=' + encodeURIComponent(sessionId) + '">Continue to ID upload &rarr;</a>' +
+        '<a class="btn accent" href="id-upload.html?' + linkQuery + '">Continue to ID upload &rarr;</a>' +
       '</div>';
   }
 

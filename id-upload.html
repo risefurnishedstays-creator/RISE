@@ -108,7 +108,8 @@
     <span class="rise-step done" style="transform: rotate(-2deg);"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&gt;</span>
     <span class="rise-step done" style="transform: rotate(1.5deg);"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&gt;</span>
     <span class="rise-step done" style="transform: rotate(-1.5deg);"><span class="num">&#10003;</span>Sign Lease</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step current" style="transform: rotate(2deg);"><span class="num">4</span>Upload ID</span>
+    <span class="rise-step current" style="transform: rotate(2deg);"><span class="num">4</span>Upload ID</span><span class="rise-step-sep">&gt;</span>
+    <span class="rise-step" style="transform: rotate(-2deg);"><span class="num">5</span>Confirmation</span>
   </div>
 </nav>
 <script>
@@ -142,8 +143,20 @@
 
   var params = new URLSearchParams(window.location.search);
   var sessionId = params.get('session_id');
+  var confirmationCodeParam = params.get('confirmation_code');
 
-  if (!sessionId) {
+  // "Upload ID later" and weekly/urgent reminder emails link here with
+  // ?confirmation_code= instead of ?session_id=, since the original
+  // Stripe session id isn't stored anywhere retrievable days later -- see
+  // api/booking-by-session.js's header comment for why. linkQuery is
+  // forwarded as-is to every other page/link on this page.
+  var linkQuery = sessionId
+    ? 'session_id=' + encodeURIComponent(sessionId)
+    : confirmationCodeParam
+      ? 'confirmation_code=' + encodeURIComponent(confirmationCodeParam)
+      : null;
+
+  if (!linkQuery) {
     renderError('No booking session found. If you just signed your lease, check your email for confirmation.');
     return;
   }
@@ -155,7 +168,7 @@
   }
 
   function fetchBooking() {
-    fetch(API_BASE + '/api/booking-by-session?session_id=' + encodeURIComponent(sessionId))
+    fetch(API_BASE + '/api/booking-by-session?' + linkQuery)
       .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
       .then(function (result) {
         if (!result.ok || !result.data || !result.data.booking) {
@@ -177,12 +190,12 @@
     if (!booking.leaseSignedAt) {
       // Shouldn't normally happen (this page is only linked to after
       // signing), but guard against someone landing here directly.
-      window.location.href = 'lease.html?session_id=' + encodeURIComponent(sessionId);
+      window.location.href = 'lease.html?' + linkQuery;
       return;
     }
 
     if (booking.govIdUploadedAt) {
-      window.location.href = 'confirmation.html?session_id=' + encodeURIComponent(sessionId);
+      window.location.href = 'confirmation.html?' + linkQuery;
       return;
     }
 
@@ -201,9 +214,11 @@
         '<p class="id-required-note"><span class="star">*</span> Required to complete your booking.</p>' +
       '</div>' +
       '<div class="err-banner" id="uploadErr"></div>' +
-      '<button class="btn accent block" id="submitBtn" disabled>Upload &amp; finish booking</button>';
+      '<button class="btn accent block" id="submitBtn" disabled>Upload &amp; finish booking</button>' +
+      '<button class="btn block" id="laterBtn" style="margin-top:10px; box-shadow:none; background:transparent;">I don\'t have my ID handy &mdash; remind me later</button>';
 
     setUpFileInput(booking);
+    setUpLaterButton(booking);
   }
 
   var selectedFile = null;
@@ -299,13 +314,59 @@
     reader.readAsDataURL(selectedFile);
   }
 
+  function setUpLaterButton(booking) {
+    var laterBtn = document.getElementById('laterBtn');
+    laterBtn.addEventListener('click', function () {
+      var sure = confirm("No problem -- we'll email you a link so you can upload it anytime before check-in. Continue?");
+      if (!sure) return;
+
+      laterBtn.disabled = true;
+      laterBtn.textContent = 'Sending...';
+
+      fetch(API_BASE + '/api/sign-lease?action=defer-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmationCode: booking.confirmationCode, sessionId: sessionId, confirmationCodeParam: confirmationCodeParam }),
+      })
+        .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (result) {
+          if (!result.ok) {
+            laterBtn.disabled = false;
+            laterBtn.textContent = "I don't have my ID handy — remind me later";
+            document.getElementById('uploadErr').textContent = result.data.error || 'Something went wrong. Please try again.';
+            document.getElementById('uploadErr').classList.add('show');
+            return;
+          }
+          renderDeferred(booking);
+        })
+        .catch(function () {
+          laterBtn.disabled = false;
+          laterBtn.textContent = "I don't have my ID handy — remind me later";
+          document.getElementById('uploadErr').textContent = 'Network error -- please check your connection and try again.';
+          document.getElementById('uploadErr').classList.add('show');
+        });
+    });
+  }
+
+  function renderDeferred(booking) {
+    mount.innerHTML =
+      '<div class="success-state">' +
+        '<div class="success-badge" style="background:#fff4e0; color:var(--accent);">&#9993;</div>' +
+        '<h2>Check your email</h2>' +
+        '<p>We\'ve sent you a link so you can upload your ID anytime before check-in. You can also email it directly to <a href="mailto:risefurnishedstays@gmail.com" style="color:var(--accent); font-weight:700;">risefurnishedstays@gmail.com</a>.</p>' +
+        '<button class="btn accent" id="uploadNowAfterAllBtn">Actually, let me upload it now</button>' +
+      '</div>';
+    document.getElementById('uploadNowAfterAllBtn').addEventListener('click', function () {
+      renderUploadPage(booking);
+    });
+  }
   function renderSuccess() {
     mount.innerHTML =
       '<div class="success-state">' +
         '<div class="success-badge">&#10003;</div>' +
         '<h2>You\'re all set!</h2>' +
         '<p>Your ID has been received and your booking is complete.</p>' +
-        '<a class="btn accent" href="confirmation.html?session_id=' + encodeURIComponent(sessionId) + '">Continue to confirmation &rarr;</a>' +
+        '<a class="btn accent" href="confirmation.html?' + linkQuery + '">Continue to confirmation &rarr;</a>' +
       '</div>';
   }
 
