@@ -106,7 +106,7 @@
     <span class="rise-step done" style="transform: rotate(-2deg);"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&gt;</span>
     <span class="rise-step done" style="transform: rotate(1.5deg);"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&gt;</span>
     <span class="rise-step current" style="transform: rotate(-1.5deg);"><span class="num">3</span>Sign Lease</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step" style="transform: rotate(2deg);"><span class="num">4</span>Send ID and Complete Booking</span>
+    <span class="rise-step" style="transform: rotate(2deg);"><span class="num">4</span>Upload ID</span>
   </div>
 </nav>
 <script>
@@ -182,7 +182,8 @@
 
   function renderLease(booking) {
     if (booking.leaseSignedAt) {
-      window.location.href = 'confirmation.html?session_id=' + encodeURIComponent(sessionId);
+      var nextUrl = booking.govIdUploadedAt ? 'confirmation.html' : 'id-upload.html';
+      window.location.href = nextUrl + '?session_id=' + encodeURIComponent(sessionId);
       return;
     }
 
@@ -204,8 +205,8 @@
           '<button class="btn small" id="clearSigBtn" type="button">Clear</button>' +
         '</div>' +
       '</div>' +
-      '<label class="agree-row"><input type="checkbox" id="agreeCheck" /> I have read and agree to the lease' + (hasPets ? ' and pet addendum' : '') + ' above, and I am signing electronically as a legally binding signature.</label>' +
-      '<div class="id-note"><b>One more thing:</b> please email a photo of the front and back of your government-issued ID to <a href="mailto:risefurnishedstays@gmail.com" style="color:var(--accent); font-weight:700;">risefurnishedstays@gmail.com</a> for verification. This is required to complete your booking.</div>' +
+      '<label class="agree-row"><input type="checkbox" id="agreeCheck" required /> I have read and agree to the lease' + (hasPets ? ' and pet addendum' : '') + ' above, and I am signing electronically as a legally binding signature. <span aria-hidden="true" style="color:var(--red); font-weight:700;">*</span></label>' +
+      '<div class="id-note"><b>One more thing:</b> after signing, you\'ll be asked to upload a photo of your government-issued ID to complete your booking.</div>' +
       '<div class="err-banner" id="signErr"></div>' +
       '<button class="btn accent block" id="submitBtn" disabled>Sign lease &amp; continue</button>';
 
@@ -314,7 +315,7 @@
       fetch(API_BASE + '/api/sign-lease', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirmationCode: booking.confirmationCode, signatureImageBase64: signatureImageBase64 }),
+        body: JSON.stringify({ confirmationCode: booking.confirmationCode, signatureImageBase64: signatureImageBase64, sessionId: sessionId }),
       })
         .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
         .then(function (result) {
@@ -341,8 +342,8 @@
       '<div class="success-state">' +
         '<div class="success-badge">&#10003;</div>' +
         '<h2>Lease signed!</h2>' +
-        '<p>Thanks -- your lease is complete. Don\'t forget to email a photo of your ID to <a href="mailto:risefurnishedstays@gmail.com" style="color:var(--accent);">risefurnishedstays@gmail.com</a> if you have not already.</p>' +
-        '<a class="btn accent" href="confirmation.html?session_id=' + encodeURIComponent(sessionId) + '">Continue to confirmation &rarr;</a>' +
+        '<p>Thanks -- your lease is complete. Last step: upload a photo of your ID to finish booking.</p>' +
+        '<a class="btn accent" href="id-upload.html?session_id=' + encodeURIComponent(sessionId) + '">Continue to ID upload &rarr;</a>' +
       '</div>';
   }
 

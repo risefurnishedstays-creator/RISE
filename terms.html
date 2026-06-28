@@ -121,6 +121,9 @@
   .legal-body ul li { position: relative; padding-left: 26px; font-size: 16px; line-height: 1.55; color: var(--ink); }
   .legal-body ul li::before { content: "→"; position: absolute; left: 0; top: 0; color: var(--accent); font-weight: 700; }
   .legal-body ul li b { font-weight: 700; }
+  .legal-body ul li ul { margin: 10px 0 0; gap: 7px; }
+  .legal-body ul li ul li { font-size: 14.5px; padding-left: 22px; }
+  .legal-body ul li ul li::before { content: "–"; }
   .legal-body a.inl { color: var(--accent); text-decoration: none; border-bottom: 1.5px solid color-mix(in oklab, var(--accent) 45%, transparent); }
   .legal-body a.inl:hover { border-bottom-color: var(--accent); }
   .legal-callout { border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: var(--accent-soft); box-shadow: 4px 4px 0 var(--ink); padding: 20px 24px; margin: 4px 0 18px; }
@@ -232,7 +235,13 @@ Cancellation policy</h2>
           <ul>
             <li><b>More than 30 days before check-in</b> — your first month’s rent, cleaning fee, and any pet fees will be refunded in full.</li>
             <li><b>30 days or fewer before check-in</b> — the first month’s rent is non-refundable; however, the cleaning fee and any pet fees will be refunded.</li>
-            <li><b>After check-in</b> — the cleaning fee and any pet fees become non-refundable. If you terminate your stay early, you remain liable for rent through the 30th day following the date notice of termination is provided.</li>
+            <li><b>After check-in</b> — the cleaning fee and any pet fees become non-refundable. If you terminate your stay early, one of the following applies:
+              <ul>
+                <li>If you cancel more than 30 days before your original check-out date — a $2,550 early termination fee applies, reduced by a credit for any nights remaining in your current payment period that you’ve already paid for.</li>
+                <li>If you cancel 30 days or fewer before your original check-out date and your last payment has already been made — no termination fee applies, and that last payment is simply kept, not refunded.</li>
+                <li>If you cancel 30 days or fewer before your original check-out date and your last payment has not yet been made — that last payment becomes due in full, with no additional termination fee.</li>
+              </ul>
+            </li>
           </ul>
           <p class="muted">Date changes are accommodated when the calendar allows — just reach out.</p>
         </section>

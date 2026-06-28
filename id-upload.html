@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+<title>RISE Furnished Stays — Upload Your ID</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --font-head: 'Libre Baskerville', Georgia, serif;
+    --font-body: 'Work Sans', system-ui, sans-serif;
+    --ink: #2b2926; --ink-soft: #6f6a63; --paper: #f4f1ea; --paper-2: #ece7dc;
+    --line: #2b2926; --accent: #cc7044; --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+    --red: #b3261e; --red-soft: color-mix(in oklab, var(--red) 14%, transparent);
+    --radius-sketch: 255px 12px 225px 14px / 14px 225px 14px 255px;
+    --radius-sketch-2: 14px 225px 14px 255px / 255px 12px 225px 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-size: 17px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column;
+  }
+  h1, h2, h3 { font-family: var(--font-head); font-weight: 700; line-height: 1.1; margin: 0; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 24px; width: 100%; }
+  .box { border: 2.5px solid var(--line); border-radius: var(--radius-sketch); background: #fff; }
+  .btn {
+    font-family: var(--font-body); font-weight: 700; font-size: 16px;
+    border: 2.5px solid var(--line); border-radius: var(--radius-sketch);
+    background: var(--paper); color: var(--ink); padding: 13px 22px; cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink); transition: transform .08s, box-shadow .08s;
+  }
+  .btn:hover:not(:disabled) { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active:not(:disabled) { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn.accent { background: var(--accent); color: #fff; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+  .btn.block { display: block; width: 100%; text-align: center; }
+  .btn.small { padding: 8px 14px; font-size: 14px; box-shadow: 2px 2px 0 var(--ink); }
+
+  header.nav { padding: 22px 0; border-bottom: 2.5px solid var(--line); background: var(--paper); }
+  header.nav .wrap { display: flex; align-items: center; }
+  .logo-img { height: 48px; width: auto; display: block; }
+
+  main { flex: 1 0 auto; padding: 44px 0 80px; }
+
+  .lc-kick { font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 8px; }
+  .lc-title { font-size: clamp(26px, 4vw, 36px); margin-bottom: 8px; }
+  .lc-sub { color: var(--ink-soft); font-size: 15.5px; margin-bottom: 28px; max-width: 56ch; }
+
+  .upload-box { padding: 28px; margin-bottom: 22px; }
+  .upload-box h3 { font-size: 18px; margin-bottom: 4px; }
+  .upload-box p.hint { color: var(--ink-soft); font-size: 13.5px; margin: 0 0 18px; line-height: 1.55; }
+
+  .drop-area {
+    border: 2.5px dashed color-mix(in oklab, var(--ink) 35%, transparent);
+    border-radius: 14px; background: var(--paper); padding: 30px 20px;
+    text-align: center; cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .drop-area:hover, .drop-area.drag-over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop-area .icon { font-size: 30px; margin-bottom: 8px; }
+  .drop-area .label { font-weight: 600; font-size: 15px; }
+  .drop-area .sub { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+  input#idFileInput { display: none; }
+
+  .preview-row { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
+  .preview-row img { max-width: 180px; max-height: 130px; border: 2px solid var(--line); border-radius: 10px; display: block; object-fit: cover; }
+  .preview-meta { font-size: 13.5px; color: var(--ink-soft); }
+  .preview-meta b { color: var(--ink); }
+
+  .id-required-note { font-size: 13px; color: var(--ink-soft); margin: 14px 0 0; }
+  .id-required-note .star { color: var(--red); font-weight: 700; }
+
+  .err-banner { background: var(--red-soft); border: 2px solid var(--red); color: var(--red); border-radius: 10px; padding: 12px 16px; font-size: 14px; margin-bottom: 18px; display: none; }
+  .err-banner.show { display: block; }
+
+  .loading-state, .success-state { text-align: center; padding: 70px 24px; }
+  .loading-state p, .success-state p { color: var(--ink-soft); }
+  .success-badge { width: 64px; height: 64px; margin: 0 auto 18px; border: 2.5px solid var(--line); border-radius: 50%; background: #eaf6ee; color: #1e6b3c; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 3px 3px 0 var(--ink); }
+
+  footer.foot { background: var(--ink); color: var(--paper); padding: 26px 0; text-align: center; font-size: 13px; }
+  footer.foot a { color: var(--accent); text-decoration: none; }
+
+  .rise-stepstrip { background: var(--paper-2); border-bottom: 2px dashed color-mix(in oklab, var(--ink) 25%, transparent); padding: 16px 0 18px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 14px; max-width: 1120px; margin: 0 auto; padding: 4px 18px; font-family: var(--font-body); font-size: 16px; white-space: nowrap; min-width: max-content; }
+  .rise-step { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: var(--radius-sketch); border: 2px solid var(--line); background: var(--paper); color: var(--ink-soft); font-weight: 500; box-shadow: 2px 2px 0 var(--ink); }
+  .rise-step .num { width: 19px; height: 19px; flex: none; border-radius: 50%; border: 2px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; }
+  .rise-step.done { color: var(--ink); border-radius: var(--radius-sketch-2); }
+  .rise-step.done .num { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .rise-step.current { color: #fff; background: var(--accent); border-color: var(--line); font-weight: 700; box-shadow: 3px 3px 0 var(--ink); }
+  .rise-step.current .num { border-color: #fff; }
+  .rise-step-sep { color: var(--ink-soft); opacity: .6; font-family: var(--font-body); font-weight: 700; font-size: 26px; line-height: 1; }
+  @media (max-width: 640px) { .rise-stepstrip-inner { font-size: 14.5px; justify-content: flex-start; gap: 10px; } .rise-step { padding: 6px 10px; } }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap">
+    <a href="index.html"><img class="logo-img" src="assets/rise-logo.png" alt="RISE Furnished Stays" /></a>
+  </div>
+</header>
+
+<nav class="rise-stepstrip" aria-label="Booking progress">
+  <div class="rise-stepstrip-inner">
+    <span class="rise-step done" style="transform: rotate(-2deg);"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&gt;</span>
+    <span class="rise-step done" style="transform: rotate(1.5deg);"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&gt;</span>
+    <span class="rise-step done" style="transform: rotate(-1.5deg);"><span class="num">&#10003;</span>Sign Lease</span><span class="rise-step-sep">&gt;</span>
+    <span class="rise-step current" style="transform: rotate(2deg);"><span class="num">4</span>Upload ID</span>
+  </div>
+</nav>
+<script>
+  (function () {
+    var current = document.querySelector('.rise-stepstrip .rise-step.current');
+    if (current) current.scrollIntoView({ block: 'nearest', inline: 'center' });
+  })();
+</script>
+
+<main>
+  <div class="wrap">
+    <div id="idMount">
+      <div class="loading-state">
+        <p>Loading...</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">Questions? Reach out at <a href="mailto:risefurnishedstays@gmail.com">risefurnishedstays@gmail.com</a></div>
+</footer>
+
+<script>
+(function () {
+  var mount = document.getElementById('idMount');
+  if (!mount) return;
+
+  var API_BASE = 'https://rise-eta-three.vercel.app';
+  var MAX_BYTES = 10 * 1024 * 1024; // 10MB -- generous for a phone-camera photo, small enough to stay well under serverless body-size limits
+
+  var params = new URLSearchParams(window.location.search);
+  var sessionId = params.get('session_id');
+
+  if (!sessionId) {
+    renderError('No booking session found. If you just signed your lease, check your email for confirmation.');
+    return;
+  }
+
+  function renderError(msg) {
+    mount.innerHTML =
+      '<div class="loading-state"><p style="color:var(--red);">' + msg + '</p>' +
+      '<a class="btn accent" href="index.html#book-stay">Browse homes &amp; dates</a></div>';
+  }
+
+  function fetchBooking() {
+    fetch(API_BASE + '/api/booking-by-session?session_id=' + encodeURIComponent(sessionId))
+      .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .then(function (result) {
+        if (!result.ok || !result.data || !result.data.booking) {
+          renderError('We could not find your booking. Please refresh, or contact us if this persists.');
+          return;
+        }
+        renderUploadPage(result.data.booking);
+      })
+      .catch(function () { renderError('Something went wrong loading your booking. Please refresh, or contact us if this persists.'); });
+  }
+
+  function escapeHtml(str) {
+    var d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  function renderUploadPage(booking) {
+    if (!booking.leaseSignedAt) {
+      // Shouldn't normally happen (this page is only linked to after
+      // signing), but guard against someone landing here directly.
+      window.location.href = 'lease.html?session_id=' + encodeURIComponent(sessionId);
+      return;
+    }
+
+    if (booking.govIdUploadedAt) {
+      window.location.href = 'confirmation.html?session_id=' + encodeURIComponent(sessionId);
+      return;
+    }
+
+    mount.innerHTML =
+      '<div class="lc-kick">Last step</div>' +
+      '<h1 class="lc-title">Upload your ID</h1>' +
+      '<p class="lc-sub">For verification, please upload a photo of the <b>front</b> of your government-issued ID (driver\'s license, passport, or state ID).</p>' +
+      '<div class="box upload-box">' +
+        '<div class="drop-area" id="dropArea">' +
+          '<div class="icon">&#128247;</div>' +
+          '<div class="label">Tap to choose a photo</div>' +
+          '<div class="sub">or drag and drop a file here</div>' +
+        '</div>' +
+        '<input type="file" id="idFileInput" accept="image/*" capture="environment" />' +
+        '<div id="previewArea"></div>' +
+        '<p class="id-required-note"><span class="star">*</span> Required to complete your booking.</p>' +
+      '</div>' +
+      '<div class="err-banner" id="uploadErr"></div>' +
+      '<button class="btn accent block" id="submitBtn" disabled>Upload &amp; finish booking</button>';
+
+    setUpFileInput(booking);
+  }
+
+  var selectedFile = null;
+
+  function setUpFileInput(booking) {
+    var dropArea = document.getElementById('dropArea');
+    var fileInput = document.getElementById('idFileInput');
+    var previewArea = document.getElementById('previewArea');
+    var submitBtn = document.getElementById('submitBtn');
+    var errEl = document.getElementById('uploadErr');
+
+    dropArea.addEventListener('click', function () { fileInput.click(); });
+
+    dropArea.addEventListener('dragover', function (e) { e.preventDefault(); dropArea.classList.add('drag-over'); });
+    dropArea.addEventListener('dragleave', function () { dropArea.classList.remove('drag-over'); });
+    dropArea.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropArea.classList.remove('drag-over');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    });
+
+    fileInput.addEventListener('change', function () {
+      if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(file) {
+      errEl.classList.remove('show');
+
+      if (!file.type || file.type.indexOf('image/') !== 0) {
+        errEl.textContent = 'Please choose an image file (JPG, PNG, or HEIC).';
+        errEl.classList.add('show');
+        return;
+      }
+      if (file.size > MAX_BYTES) {
+        errEl.textContent = 'That image is too large (max 10MB). Please choose a smaller photo or take a new one at a lower resolution.';
+        errEl.classList.add('show');
+        return;
+      }
+
+      selectedFile = file;
+      var reader = new FileReader();
+      reader.onload = function () {
+        previewArea.innerHTML =
+          '<div class="preview-row">' +
+            '<img src="' + reader.result + '" alt="ID preview" />' +
+            '<div class="preview-meta"><b>' + escapeHtml(file.name) + '</b><br>' + (Math.round(file.size / 1024)) + ' KB &mdash; tap the area above to choose a different photo</div>' +
+          '</div>';
+        submitBtn.disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    submitBtn.addEventListener('click', function () { onSubmit(booking, submitBtn, errEl); });
+  }
+
+  function onSubmit(booking, submitBtn, errEl) {
+    if (!selectedFile) return;
+    errEl.classList.remove('show');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading...';
+
+    var reader = new FileReader();
+    reader.onload = function () {
+      fetch(API_BASE + '/api/sign-lease?action=upload-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmationCode: booking.confirmationCode, idImageBase64: reader.result }),
+      })
+        .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (result) {
+          if (!result.ok) {
+            errEl.textContent = result.data.error || 'Something went wrong uploading your ID. Please try again.';
+            errEl.classList.add('show');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Upload & finish booking';
+            return;
+          }
+          renderSuccess();
+        })
+        .catch(function () {
+          errEl.textContent = 'Network error -- please check your connection and try again.';
+          errEl.classList.add('show');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Upload & finish booking';
+        });
+    };
+    reader.onerror = function () {
+      errEl.textContent = 'Could not read that file -- please try a different photo.';
+      errEl.classList.add('show');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Upload & finish booking';
+    };
+    reader.readAsDataURL(selectedFile);
+  }
+
+  function renderSuccess() {
+    mount.innerHTML =
+      '<div class="success-state">' +
+        '<div class="success-badge">&#10003;</div>' +
+        '<h2>You\'re all set!</h2>' +
+        '<p>Your ID has been received and your booking is complete.</p>' +
+        '<a class="btn accent" href="confirmation.html?session_id=' + encodeURIComponent(sessionId) + '">Continue to confirmation &rarr;</a>' +
+      '</div>';
+  }
+
+  fetchBooking();
+})();
+</script>
+</body>
+</html>
