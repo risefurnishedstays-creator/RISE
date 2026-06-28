@@ -21,10 +21,16 @@ module.exports = async function handler(req, res) {
 
     // listBookings(unit, true) should already exclude status: "cancelled"
     // bookings entirely. For "cancelled-midstay" bookings, we still want
-    // them on the calendar, but only through liabilityEndDate -- not the
-    // original checkOut -- since the guest is no longer occupying (or paying
-    // for) the remainder of the stay. We clamp checkOut here so generateICal
-    // doesn't need to know about cancellation semantics at all.
+    // them on the calendar, but only through liabilityEndDate -- the last
+    // night the guest actually paid for and is entitled to occupy -- not
+    // the original checkOut, since the guest is no longer occupying (or
+    // paying for) any remainder beyond that. We clamp checkOut here so
+    // generateICal doesn't need to know about cancellation semantics at
+    // all. liabilityEndDate is set by cancellationOutcome() in
+    // lib/pricing.js for all three midstay termination-fee rules: it's the
+    // end of the guest's last paid period under Rule 1, or the original
+    // checkout date under Rules 2/3 (where the final period was always the
+    // last one regardless of the early-termination fee outcome).
     const bookings = (await listBookings(unit, true)).map((b) => {
       if (b.status === "cancelled-midstay" && b.liabilityEndDate) {
         return { ...b, checkOut: b.liabilityEndDate };
