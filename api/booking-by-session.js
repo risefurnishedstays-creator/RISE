@@ -8,23 +8,24 @@
 // storage, the same source of truth the webhook and iCal feed use.
 //
 // GET /api/booking-by-session?session_id=cs_test_...
-// GET /api/booking-by-session?confirmation_code=ABC1234567
+// GET /api/booking-by-session?confirmation_code=RISE-XXXXXX
 //
-// confirmationCode is deterministically derived from the session id the
-// same way stripe-webhook.js does it (session.id.slice(-10).toUpperCase()),
-// so no new field needs to be added to the booking record and no Stripe
-// API call is needed here -- this only touches Redis.
+// confirmationCode is a randomly-generated, storage-checked-unique value
+// (see generateConfirmationCode() in lib/bookings.js) rather than derived
+// from the session id -- it can no longer be recomputed here the way it
+// used to be, so a session_id lookup instead scans stored bookings for a
+// matching stripeSessionId field (saved at booking time in
+// stripe-webhook.js). This is the same scan-based lookup pattern already
+// used elsewhere (e.g. stripe-webhook.js's findConfirmationCodeByPaymentIntent).
 //
 // confirmation_code exists as a second way in, for links in reminder
-// emails sent days after the original checkout session -- the full Stripe
-// session_id from that session was never stored anywhere retrievable, only
-// its one-way-derived confirmationCode, so those emails (lease-signing and
-// ID-upload reminders) link to lease.html/id-upload.html with
-// ?confirmation_code=... instead of ?session_id=.... Both query params are
-// accepted by lease.html/id-upload.html themselves; whichever is present
-// is forwarded here as-is.
+// emails sent days after the original checkout session -- the guest's
+// actual confirmation code is shown to them right after booking, so by
+// the time a reminder email goes out days later, this is the more direct
+// path. Both query params are accepted by lease.html/id-upload.html
+// themselves; whichever is present is forwarded here as-is.
 
-const { getBooking } = require("../lib/bookings");
+const { getBooking, listAllConfirmedBookings } = require("../lib/bookings");
 const { priceParts } = require("../lib/pricing");
 const { buildLeaseText, buildPetAddendumText } = require("../lib/leaseTemplate");
 
@@ -47,13 +48,19 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "session_id or confirmation_code is required." });
   }
 
-  const confirmationCode = sessionId ? sessionId.slice(-10).toUpperCase() : confirmationCodeParam.toUpperCase();
-
   let booking;
+  let confirmationCode;
   try {
-    booking = await getBooking(confirmationCode);
+    if (confirmationCodeParam) {
+      confirmationCode = confirmationCodeParam.toUpperCase();
+      booking = await getBooking(confirmationCode);
+    } else {
+      const all = await listAllConfirmedBookings();
+      booking = all.find((b) => b.stripeSessionId === sessionId) || null;
+      confirmationCode = booking ? booking.confirmationCode : null;
+    }
   } catch (e) {
-    console.error("booking-by-session lookup failed for", confirmationCode, e.message);
+    console.error("booking-by-session lookup failed for", confirmationCode || sessionId, e.message);
     return res.status(500).json({ error: "Could not look up booking." });
   }
 

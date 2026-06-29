@@ -36,7 +36,7 @@
 
 const Stripe = require("stripe");
 const { sendEmail } = require("../lib/sendEmail");
-const { saveBooking, getBooking, updateBookingStatus, listAllConfirmedBookings } = require("../lib/bookings");
+const { saveBooking, getBooking, updateBookingStatus, listAllConfirmedBookings, generateConfirmationCode } = require("../lib/bookings");
 const { priceParts, key, addDays } = require("../lib/pricing");
 const {
   bookingReservedEmail,
@@ -92,7 +92,16 @@ module.exports = async function handler(req, res) {
 
 async function handleCheckoutCompleted(session) {
   const meta = session.metadata || {};
-  const confirmationCode = session.id.slice(-10).toUpperCase();
+  // Confirmation codes are now generated fresh (format: RISE-XXXXXX) and
+  // checked for uniqueness against storage, rather than derived from the
+  // last 10 characters of the Stripe session id. The old scheme inherited
+  // uniqueness for free from Stripe's own session ids, but produced
+  // confusing-looking codes (raw Stripe id fragments, not meant for human
+  // use) -- this trades that free uniqueness guarantee for an explicit
+  // check (see generateConfirmationCode()'s comment in lib/bookings.js)
+  // in exchange for a code that's actually meant to be read, typed, and
+  // referenced by a guest.
+  const confirmationCode = await generateConfirmationCode();
 
   // Retrieve the PaymentIntent to get the saved payment method. With
   // capture_method: manual, session.payment_status is "unpaid" here --
@@ -148,6 +157,7 @@ async function handleCheckoutCompleted(session) {
     await saveBooking({
       unitCode: meta.unitCode,
       confirmationCode,
+      stripeSessionId: session.id,
       guestName: meta.guestName,
       guestEmail: meta.guestEmail || session.customer_email,
       guestPhone: meta.guestPhone,

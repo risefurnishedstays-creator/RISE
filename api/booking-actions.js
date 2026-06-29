@@ -11,6 +11,7 @@
 // POST /api/booking-actions?action=cancel        body: { confirmationCode, noticeDate? }
 // POST /api/booking-actions?action=charge-liability  body: { confirmationCode }
 // POST /api/booking-actions?action=mark-lease-signed body: { confirmationCode }
+// POST /api/booking-actions?action=mark-id-received body: { confirmationCode, driveFileUrl? }
 
 const Stripe = require("stripe");
 const { getBooking, updateBookingStatus } = require("../lib/bookings");
@@ -23,6 +24,7 @@ const {
   liabilityInvoiceOwnerEmail,
   checkinInstructionsEmail,
   unitCheckinPdfAttachment,
+  bookingCompleteEmail,
 } = require("../lib/emailTemplates");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
@@ -87,8 +89,9 @@ module.exports = async function handler(req, res) {
   if (req.method === "POST" && action === "cancel") return handleCancel(req, res);
   if (req.method === "POST" && action === "charge-liability") return handleChargeLiability(req, res);
   if (req.method === "POST" && action === "mark-lease-signed") return handleMarkLeaseSigned(req, res);
+  if (req.method === "POST" && action === "mark-id-received") return handleMarkIdReceived(req, res);
 
-  return res.status(400).json({ error: "Unknown or missing action. Use ?action=preview|cancel|charge-liability|mark-lease-signed with the matching method." });
+  return res.status(400).json({ error: "Unknown or missing action. Use ?action=preview|cancel|charge-liability|mark-lease-signed|mark-id-received with the matching method." });
 };
 
 // =========================================================================
@@ -393,7 +396,7 @@ async function handleCancel(req, res) {
     await sendEmail({
       to: "risefurnishedstays@gmail.com",
       subject: `Cancellation: ${confirmationCode} (${outcome.branch}${outcome.midstayRule ? " rule " + outcome.midstayRule : ""})`,
-      html: cancellationOwnerEmail({ booking, outcome, refund, voidedInvoiceIds, billedInvoice, billingError }),
+      html: cancellationOwnerEmail({ booking, outcome, refund, voidedInvoiceIds, billedInvoice, billingError, noticeDate: noticeDate || new Date().toISOString() }),
     });
   } catch (e) {
     ownerEmailError = e.message;
@@ -597,5 +600,88 @@ async function handleMarkLeaseSigned(req, res) {
     leaseSignedAt: now,
     checkinEmail: emailSentNow ? "sent" : "scheduled",
     scheduledFor: timing.scheduledFor,
+  });
+}
+
+// =========================================================================
+// action=mark-id-received (POST)
+//
+// For when a guest emails their government ID to risefurnishedstays@gmail.com
+// instead of using id-upload.html -- there is no automatic way for the
+// system to know that happened, since it only ever sees uploads that go
+// through that page. Without this action, govIdUploadedAt would never get
+// set: the weekly/urgent ID reminder emails would keep nagging the guest
+// indefinitely, and they'd never receive the "you're all set" booking-
+// complete email, even though they'd actually done their part.
+//
+// Use this AFTER you've manually saved the emailed photo into the same
+// Google Drive "Signed Leases" folder the automated uploads use, so the
+// archive stays in one place either way -- pass the resulting Drive file
+// URL as driveFileUrl if you have it (optional; purely for your own
+// later reference, not required for the booking to be marked complete).
+// =========================================================================
+async function handleMarkIdReceived(req, res) {
+  const { confirmationCode, driveFileUrl } = req.body || {};
+  if (!confirmationCode) {
+    return res.status(400).json({ error: "confirmationCode is required." });
+  }
+
+  let booking;
+  try {
+    booking = await getBooking(confirmationCode);
+  } catch (e) {
+    console.error("mark-id-received lookup failed for", confirmationCode, e.message);
+    return res.status(500).json({ error: "Could not look up booking." });
+  }
+  if (!booking) return res.status(404).json({ error: "Booking not found." });
+
+  if (!booking.leaseSignedAt) {
+    return res.status(409).json({ error: "This booking's lease hasn't been signed yet. Sign the lease before marking the ID as received." });
+  }
+
+  if (booking.govIdUploadedAt) {
+    return res.status(409).json({ error: "ID already marked as received for this booking.", govIdUploadedAt: booking.govIdUploadedAt });
+  }
+
+  const now = new Date().toISOString();
+  const updates = { govIdUploadedAt: now };
+  if (driveFileUrl) updates.govIdDriveFileUrl = driveFileUrl;
+
+  try {
+    await updateBookingStatus(confirmationCode, updates);
+  } catch (e) {
+    console.error("CRITICAL: ID marked received but booking record not updated:", confirmationCode, e.message);
+    return res.status(500).json({ error: "Could not save this. Update storage manually." });
+  }
+
+  // Same one-time consolidated confirmation api/sign-lease.js's normal
+  // upload-id action sends -- guarded by bookingCompleteEmailSent the
+  // same way, so this can't double-send even if called twice.
+  let emailSentNow = false;
+  if (!booking.bookingCompleteEmailSent) {
+    try {
+      await sendEmail({
+        to: booking.guestEmail,
+        subject: `You're all set - RISE Furnished Stays (${confirmationCode})`,
+        replyTo: "risefurnishedstays@gmail.com",
+        html: bookingCompleteEmail({
+          guestName: booking.guestName,
+          unitCode: booking.unitCode,
+          checkIn: booking.checkIn,
+          checkOut: booking.checkOut,
+          confirmationCode: booking.confirmationCode,
+        }),
+      });
+      emailSentNow = true;
+      await updateBookingStatus(confirmationCode, { bookingCompleteEmailSent: true });
+    } catch (e) {
+      console.error("Booking-complete email failed (non-fatal) for", confirmationCode, e.message);
+    }
+  }
+
+  return res.status(200).json({
+    confirmationCode,
+    govIdUploadedAt: now,
+    bookingCompleteEmailSent: emailSentNow,
   });
 }
