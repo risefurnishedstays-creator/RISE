@@ -67,6 +67,7 @@
 
   .preview-row { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
   .preview-row img { max-width: 180px; max-height: 130px; border: 2px solid var(--line); border-radius: 10px; display: block; object-fit: cover; }
+  .preview-row .file-icon { width: 70px; height: 90px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 32px; border: 2px solid var(--line); border-radius: 10px; background: var(--paper); }
   .preview-meta { font-size: 13.5px; color: var(--ink-soft); }
   .preview-meta b { color: var(--ink); }
 
@@ -202,14 +203,14 @@
     mount.innerHTML =
       '<div class="lc-kick">Step 4 of 5</div>' +
       '<h1 class="lc-title">Upload your ID</h1>' +
-      '<p class="lc-sub">For verification, please upload a photo of the <b>front</b> of your government-issued ID (driver\'s license, passport, or state ID).</p>' +
+      '<p class="lc-sub">For verification, please upload the <b>front</b> of your government-issued ID (driver\'s license, passport, or state ID) -- a photo, scan, or PDF all work.</p>' +
       '<div class="box upload-box">' +
         '<div class="drop-area" id="dropArea">' +
           '<div class="icon">&#128247;</div>' +
-          '<div class="label">Tap to choose a photo</div>' +
+          '<div class="label">Tap to choose a file</div>' +
           '<div class="sub">or drag and drop a file here</div>' +
         '</div>' +
-        '<input type="file" id="idFileInput" accept="image/*" />' +
+        '<input type="file" id="idFileInput" accept="image/*,.pdf,application/pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" />' +
         '<div id="previewArea"></div>' +
         '<p class="id-required-note"><span class="star">*</span> Required to complete your booking.</p>' +
       '</div>' +
@@ -244,27 +245,52 @@
       if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
     });
 
+    var ALLOWED_TYPES = {
+      'application/pdf': true,
+      'application/msword': true,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': true,
+    };
+
+    function isAllowedFile(file) {
+      if (file.type && file.type.indexOf('image/') === 0) return true;
+      if (file.type && ALLOWED_TYPES[file.type]) return true;
+      // Some browsers/OSes leave .type blank for certain files (notably
+      // older .doc files on some systems) -- fall back to checking the
+      // extension itself rather than rejecting a valid file just because
+      // the browser didn't report a MIME type for it.
+      var name = (file.name || '').toLowerCase();
+      return /\.(pdf|doc|docx)$/.test(name);
+    }
+
     function handleFile(file) {
       errEl.classList.remove('show');
 
-      if (!file.type || file.type.indexOf('image/') !== 0) {
-        errEl.textContent = 'Please choose an image file (JPG, PNG, or HEIC).';
+      if (!isAllowedFile(file)) {
+        errEl.textContent = 'Please choose an image (JPG, PNG, HEIC, etc.), a PDF, or a Word document.';
         errEl.classList.add('show');
         return;
       }
       if (file.size > MAX_BYTES) {
-        errEl.textContent = 'That image is too large (max 10MB). Please choose a smaller photo or take a new one at a lower resolution.';
+        errEl.textContent = 'That file is too large (max 10MB). Please choose a smaller file.';
         errEl.classList.add('show');
         return;
       }
 
       selectedFile = file;
+      var isImage = file.type && file.type.indexOf('image/') === 0;
       var reader = new FileReader();
       reader.onload = function () {
+        // PDFs and Word docs can't be shown as an <img> preview -- show a
+        // generic file icon + name instead, same idea as the image
+        // preview but without trying to render a thumbnail that wouldn't
+        // work for these formats anyway.
+        var previewVisual = isImage
+          ? '<img src="' + reader.result + '" alt="ID preview" />'
+          : '<div class="file-icon" aria-hidden="true">&#128196;</div>';
         previewArea.innerHTML =
           '<div class="preview-row">' +
-            '<img src="' + reader.result + '" alt="ID preview" />' +
-            '<div class="preview-meta"><b>' + escapeHtml(file.name) + '</b><br>' + (Math.round(file.size / 1024)) + ' KB &mdash; tap the area above to choose a different photo</div>' +
+            previewVisual +
+            '<div class="preview-meta"><b>' + escapeHtml(file.name) + '</b><br>' + (Math.round(file.size / 1024)) + ' KB &mdash; tap the area above to choose a different file</div>' +
           '</div>';
         submitBtn.disabled = false;
       };
@@ -306,7 +332,7 @@
         });
     };
     reader.onerror = function () {
-      errEl.textContent = 'Could not read that file -- please try a different photo.';
+      errEl.textContent = 'Could not read that file -- please try a different file.';
       errEl.classList.add('show');
       submitBtn.disabled = false;
       submitBtn.textContent = 'Upload & finish booking';
