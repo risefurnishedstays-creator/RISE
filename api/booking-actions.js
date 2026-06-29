@@ -99,7 +99,7 @@ module.exports = async function handler(req, res) {
 // action=preview (GET) -- was cancel-preview.js
 // =========================================================================
 async function handlePreview(req, res) {
-  const { confirmationCode, noticeDate } = req.query || {};
+  const { confirmationCode, noticeDate, bookingDateOverride } = req.query || {};
   if (!confirmationCode) {
     return res.status(400).json({ error: "confirmationCode is required." });
   }
@@ -118,9 +118,19 @@ async function handlePreview(req, res) {
     return res.status(200).json({ booking, alreadyCancelled: true });
   }
 
+  // bookingDateOverride exists for bookings whose stored createdAt is
+  // missing or wrong -- most commonly a booking made before createdAt was
+  // added to the schema at all (an old record in storage only ever has
+  // the fields that existed when it was written; it doesn't retroactively
+  // gain new ones). Without an override, cancellationOutcome() safely
+  // defaults a missing createdAt to "outside the grace window" -- correct
+  // as a default, but wrong for a real booking that actually was made
+  // within the last 5 days and just happens to predate this field.
+  const effectiveBookingDate = bookingDateOverride || booking.createdAt;
+
   const { lastPaymentPaid, finalPeriodPaid } = await determinePaymentStatus(booking, noticeDate);
-  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid, booking.createdAt);
-  return res.status(200).json({ booking, outcome, alreadyCancelled: false });
+  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid, effectiveBookingDate);
+  return res.status(200).json({ booking, outcome, alreadyCancelled: false, effectiveBookingDate });
 }
 
 // Shared by handlePreview and handleCancel so the preview a guest/owner sees
@@ -164,7 +174,7 @@ async function determinePaymentStatus(booking, noticeDate) {
 // action=cancel (POST) -- was cancel-booking.js
 // =========================================================================
 async function handleCancel(req, res) {
-  const { confirmationCode, noticeDate } = req.body || {};
+  const { confirmationCode, noticeDate, bookingDateOverride } = req.body || {};
   if (!confirmationCode) {
     return res.status(400).json({ error: "confirmationCode is required." });
   }
@@ -184,8 +194,15 @@ async function handleCancel(req, res) {
     return res.status(409).json({ error: "Booking is already cancelled.", booking });
   }
 
+  // See handlePreview's comment on bookingDateOverride -- the same
+  // override must be used here too, so what actually gets charged/refunded
+  // always matches what the preview showed, rather than the preview using
+  // an override the admin supplied while the real cancellation silently
+  // falls back to a missing/wrong stored createdAt.
+  const effectiveBookingDate = bookingDateOverride || booking.createdAt;
+
   const { lastPaymentPaid, finalPeriodPaid } = await determinePaymentStatus(booking, noticeDate);
-  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid, booking.createdAt);
+  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid, effectiveBookingDate);
 
   // ---- Stripe: refund (if applicable -- only the pre-arrival branches) ----
   // If the booking is still "pending-capture" (within the 5-day grace
