@@ -274,17 +274,22 @@
       line = line.replace(/^(\([A-Za-z]+\))(\s)/, '<b>$1</b>$2');
 
       // "Label:" lines at the start of a line, used by the cancellation
-      // clause's three sub-cases ("More than 30 days before check-in:",
-      // "30 days or fewer before check-in:", "After check-in (early
+      // clause's sub-cases ("Within 5 days of booking:", "More than 5
+      // days after booking, but more than 30 days before check-in:", "30
+      // days or fewer before check-in:", "After check-in (early
       // termination):") -- bolds the label up to and including the colon.
       // Starts with a letter OR digit since "30 days or fewer..." begins
-      // with a number. Skipped if a numbered heading already matched this
-      // line (e.g. "5. Utility Bills/Service Contracts:") -- that heading
-      // match already bolded its own colon-terminated title, and applying
-      // this rule on top would instead match the next colon much further
-      // into the paragraph, bolding far more than intended.
+      // with a number. Cap is 90 chars (just past the longest real label,
+      // ~70 chars) -- high enough to catch every actual label, but still
+      // well short of a full paragraph, so a colon deep inside ordinary
+      // prose still won't accidentally match. Skipped if a numbered
+      // heading already matched this line (e.g. "5. Utility
+      // Bills/Service Contracts:") -- that heading match already bolded
+      // its own colon-terminated title, and applying this rule on top
+      // would instead match the next colon much further into the
+      // paragraph, bolding far more than intended.
       if (!matchedNumberedHeading) {
-        line = line.replace(/^([A-Za-z0-9][^\n:]{0,60}:)(\s)/, '<b>$1</b>$2');
+        line = line.replace(/^([A-Za-z0-9][^\n:]{0,90}:)(\s)/, '<b>$1</b>$2');
       }
 
       // Document title and witness lines.
