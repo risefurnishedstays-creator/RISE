@@ -5,7 +5,7 @@
 // Frontend should POST JSON here as: { name, email, phone, message }
 
 const { sendEmail } = require("../lib/sendEmail");
-const { contactFormEmail } = require("../lib/emailTemplates");
+const { contactFormEmail, contactConfirmationGuestEmail } = require("../lib/emailTemplates");
 
 module.exports = async function handler(req, res) {
   // CORS: allow requests from your site
@@ -40,6 +40,22 @@ module.exports = async function handler(req, res) {
       html: contactFormEmail({ name, email, phone, message }),
       replyTo: email, // lets you hit "reply" and respond straight to the guest
     });
+
+    // Send the guest a copy of their own message for their records. Kept
+    // independent of the owner notification above -- if this fails (e.g.
+    // a bad guest email address Resend rejects), the form submission
+    // itself still succeeds and you still got notified, which matters
+    // more than the guest's confirmation copy.
+    try {
+      await sendEmail({
+        to: email,
+        subject: "We received your message - RISE Furnished Stays",
+        html: contactConfirmationGuestEmail({ name, email, phone, message }),
+        replyTo: "risefurnishedstays@gmail.com",
+      });
+    } catch (e) {
+      console.error("Contact form guest confirmation email failed (non-fatal):", email, e.message);
+    }
 
     return res.status(200).json({ success: true, message: "Message sent successfully." });
   } catch (error) {
