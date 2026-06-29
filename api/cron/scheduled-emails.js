@@ -41,7 +41,7 @@ const Stripe = require("stripe");
 const { listAllConfirmedBookings, updateBookingStatus } = require("../../lib/bookings");
 const { key, addDays } = require("../../lib/pricing");
 const { sendEmail } = require("../../lib/sendEmail");
-const { checkinInstructionsEmail, leaseReminderEmail, idUploadReminderEmail, ownerLeaseOverdueAlertEmail, ownerDoorCodeNeededEmail, checkoutInstructionsEmail, unitCheckinPdfAttachment } = require("../../lib/emailTemplates");
+const { checkinInstructionsEmail, leaseReminderEmail, idUploadReminderEmail, ownerLeaseOverdueAlertEmail, ownerDoorCodeNeededEmail, checkoutInstructionsEmail, unitCheckinPdfAttachment, houseRulesPdfAttachment } = require("../../lib/emailTemplates");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -145,11 +145,13 @@ module.exports = async function handler(req, res) {
     ) {
       try {
         const pdfAttachment = unitCheckinPdfAttachment(booking.unitCode);
+        const rulesAttachment = houseRulesPdfAttachment(booking.pets || 0);
+        const attachments = [pdfAttachment, rulesAttachment].filter(Boolean);
         await sendEmail({
           to: booking.guestEmail,
           subject: `Check-in details for your stay - RISE Furnished Stays`,
           replyTo: "risefurnishedstays@gmail.com",
-          attachments: pdfAttachment ? [pdfAttachment] : undefined,
+          attachments: attachments.length ? attachments : undefined,
           html: checkinInstructionsEmail({
             guestName: booking.guestName,
             unitCode: booking.unitCode,
