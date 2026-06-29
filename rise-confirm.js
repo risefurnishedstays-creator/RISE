@@ -99,16 +99,68 @@
     // today (saveBooking() only persists the fields cancel-booking.js and
     // the iCal feed need) -- so this recap shows what's actually verifiable
     // from storage rather than guessing at amounts. The full payment/guest
-    // breakdown still arrives via the confirmation email, which is built
-    // from the live Stripe session data at the time of booking.
+    // breakdown still arrives via email, which is built from the live
+    // Stripe session data at the time of booking.
     var sched = '';
+
+    // Figure out which of the 4 real states this booking is actually in,
+    // rather than always showing the same "send your ID" message
+    // regardless of status -- that was a real bug (this file predates the
+    // hold-then-capture and ID-upload-page work and was never updated to
+    // match). Mirrors the same flags lease.html / id-upload.html /
+    // sign-lease.js already check (leaseSignedAt, govIdUploadedAt,
+    // booking.status), so this page's framing always matches reality
+    // instead of drifting out of sync with the rest of the flow again.
+    var isComplete = !!rec.govIdUploadedAt;
+    var leaseSigned = !!rec.leaseSignedAt;
+    var isPendingCapture = rec.status === 'pending-capture';
+
+    var kicker, heading, lede, nextItems;
+
+    if (isComplete) {
+      kicker = 'Booking confirmed';
+      heading = 'You\u2019re all set' + (first ? ', ' + first : '') + '!';
+      lede = 'Your reservation for <b>' + rec.unitCode + (unitLabel ? ' \u00b7 ' + unitLabel : '') + '</b> is fully confirmed -- payment received, lease signed, and ID verified.' +
+        (rec.bookingCompleteEmailSent ? ' A confirmation email with your full payment breakdown and receipt has been sent to <b>' + (rec.guestEmail || 'your email') + '</b>.' : ' A confirmation email with your full payment breakdown and receipt is on its way to <b>' + (rec.guestEmail || 'your email') + '</b>.');
+      nextItems = [
+        '<b>No further action is needed from you right now.</b>',
+        'We\u2019ll email the exact address, check-in details, wifi info, and house rules about a week before your arrival.',
+        'Questions before then? Reach out via our <a href="contact.html" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">contact page</a> or at risefurnishedstays@gmail.com.',
+      ];
+    } else if (leaseSigned) {
+      kicker = isPendingCapture ? 'Lease signed' : 'Payment successful';
+      heading = 'Upload your ID to finish booking' + (first ? ', ' + first : '');
+      lede = 'Your lease for <b>' + rec.unitCode + (unitLabel ? ' \u00b7 ' + unitLabel : '') + '</b> is signed' +
+        (isPendingCapture ? ', and your card is on hold' : ' and your payment is confirmed') +
+        '. Your booking isn\u2019t complete yet -- you\u2019ll need to upload a photo of your government-issued ID before your stay is confirmed.';
+      var idUploadUrl = 'id-upload.html?confirmation_code=' + encodeURIComponent(rec.confirmationCode);
+      nextItems = [
+        '<b>Upload your ID <a href="' + idUploadUrl + '" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">on this page</a>, or email it to risefurnishedstays@gmail.com for verification.</b>',
+        'A confirmation email with your full payment breakdown and receipt is on its way.',
+        'We\u2019ll send the exact address and check-in details closer to your arrival.',
+        'Questions before then? Reach out via our <a href="contact.html" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">contact page</a> or at risefurnishedstays@gmail.com.',
+      ];
+    } else {
+      kicker = isPendingCapture ? 'Reservation held' : 'Payment successful';
+      heading = 'Sign your lease to finish booking' + (first ? ', ' + first : '');
+      lede = isPendingCapture
+        ? 'Your dates for <b>' + rec.unitCode + (unitLabel ? ' \u00b7 ' + unitLabel : '') + '</b> are reserved, and your card is on hold but has not been charged yet. Your booking isn\u2019t complete yet -- you\u2019ll need to sign your lease and upload a photo ID before your stay is confirmed.'
+        : 'Your payment for <b>' + rec.unitCode + (unitLabel ? ' \u00b7 ' + unitLabel : '') + '</b> went through. Your booking isn\u2019t complete yet -- you\u2019ll need to sign your lease and upload a photo ID before your stay is confirmed.';
+      var leaseUrl = 'lease.html?confirmation_code=' + encodeURIComponent(rec.confirmationCode);
+      nextItems = [
+        '<b>Sign your lease <a href="' + leaseUrl + '" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">on this page</a>, then upload a photo ID.</b>',
+        'A confirmation email with next steps is on its way to <b>' + (rec.guestEmail || 'your email') + '</b>.',
+        'We\u2019ll send the exact address and check-in details closer to your arrival.',
+        'Questions before then? Reach out via our <a href="contact.html" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">contact page</a> or at risefurnishedstays@gmail.com.',
+      ];
+    }
 
     mount.innerHTML =
       '<div class="cf-card box">' +
         '<div class="cf-badge">✓</div>' +
-        '<div class="cf-eyebrow cf-kick">Payment successful</div>' +
-        '<h1>Send your ID to finish booking' + (first ? ', ' + first : '') + '</h1>' +
-        '<p class="cf-lede">Your payment for <b>' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</b> went through, and your lease is signed. Your booking isn\'t complete yet — you\'ll need to send a photo ID before your stay is confirmed. A confirmation email with next steps is on the way to <b>' + (rec.guestEmail || 'your email') + '</b>.</p>' +
+        '<div class="cf-eyebrow cf-kick">' + kicker + '</div>' +
+        '<h1>' + heading + '</h1>' +
+        '<p class="cf-lede">' + lede + '</p>' +
         '<div class="cf-code"><span class="cf-eyebrow cl">Confirmation code</span><span class="cv">' + rec.confirmationCode + '</span></div>' +
         '<div class="cf-recap">' +
           '<div class="rr"><span class="rk">Home</span><span class="rv">' + rec.unitCode + (unitLabel ? ' · ' + unitLabel : '') + '</span></div>' +
@@ -117,12 +169,9 @@
         '</div>' +
         sched +
         '<div class="cf-next">' +
-          '<div class="cf-next-head">Action needed to complete your booking</div>' +
+          '<div class="cf-next-head">' + (isComplete ? 'You\u2019re all set' : 'Action needed to complete your booking') + '</div>' +
           '<ul>' +
-            '<li><b>Send a photo ID to risefurnishedstays@gmail.com for verification.</b></li>' +
-            '<li>A confirmation email with your full payment breakdown and receipt is on its way.</li>' +
-            '<li>We’ll send the exact address and check-in details closer to your arrival.</li>' +
-            '<li>Questions before then? Reach out via our <a href="contact.html" style="color:var(--accent);text-decoration:none;border-bottom:1.5px solid color-mix(in oklab,var(--accent) 45%,transparent);">contact page</a> or at risefurnishedstays@gmail.com.</li>' +
+            nextItems.map(function (item) { return '<li>' + item + '</li>'; }).join('') +
           '</ul>' +
         '</div>' +
         '<div class="cf-actions">' +
@@ -143,15 +192,15 @@
   // hardcodes API_BASE instead of using a relative path.
   var API_BASE = 'https://rise-eta-three.vercel.app'; // CHANGE THIS if your Vercel URL ever changes
 
-  function fetchBooking(sessionId, attempt) {
+  function fetchBooking(linkQuery, attempt) {
     attempt = attempt || 1;
     var MAX_ATTEMPTS = 5;
     var RETRY_DELAY_MS = 1200;
 
-    fetch(API_BASE + '/api/booking-by-session?session_id=' + encodeURIComponent(sessionId))
+    fetch(API_BASE + '/api/booking-by-session?' + linkQuery)
       .then(function (res) {
         if (res.status === 404 && attempt < MAX_ATTEMPTS) {
-          setTimeout(function () { fetchBooking(sessionId, attempt + 1); }, RETRY_DELAY_MS);
+          setTimeout(function () { fetchBooking(linkQuery, attempt + 1); }, RETRY_DELAY_MS);
           return null;
         }
         return res.json().then(function (data) { return { ok: res.ok, data: data }; });
@@ -171,12 +220,24 @@
 
   var params = new URLSearchParams(window.location.search);
   var sessionId = params.get('session_id');
+  var confirmationCodeParam = params.get('confirmation_code');
 
-  if (!sessionId) {
+  // Reminder emails sent days after checkout link with ?confirmation_code=
+  // instead of ?session_id=, since the original Stripe session id isn't
+  // stored anywhere retrievable that long after checkout -- see
+  // api/booking-by-session.js's header comment for why. Whichever the
+  // guest arrived with is forwarded as-is.
+  var linkQuery = sessionId
+    ? 'session_id=' + encodeURIComponent(sessionId)
+    : confirmationCodeParam
+      ? 'confirmation_code=' + encodeURIComponent(confirmationCodeParam)
+      : null;
+
+  if (!linkQuery) {
     renderEmpty();
     return;
   }
 
   renderLoading();
-  fetchBooking(sessionId);
+  fetchBooking(linkQuery);
 })();

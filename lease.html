@@ -204,7 +204,7 @@
     var hasPets = booking.pets && booking.pets > 0;
 
     mount.innerHTML =
-      '<div class="lc-kick">Last step</div>' +
+      '<div class="lc-kick">Step 3 of 5</div>' +
       '<h1 class="lc-title">Review &amp; sign your lease</h1>' +
       '<p class="lc-sub">Your payment for <b>' + unitName + '</b> is confirmed. Please review the lease' + (hasPets ? ' and pet addendum' : '') + ' below and sign to finish booking.</p>' +
       '<div class="box lease-scroll" id="leaseScroll"></div>' +
@@ -435,7 +435,7 @@
       '<div class="success-state">' +
         '<div class="success-badge">&#10003;</div>' +
         '<h2>Lease signed!</h2>' +
-        '<p>Thanks -- your lease is complete. Last step: upload a photo of your ID to finish booking.</p>' +
+        '<p>Thanks -- your lease is complete. Next: upload a photo of your ID to finish booking.</p>' +
         '<a class="btn accent" href="id-upload.html?' + linkQuery + '">Continue to ID upload &rarr;</a>' +
       '</div>';
   }
