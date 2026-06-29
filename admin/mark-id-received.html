@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Mark ID Received — RISE Admin</title>
+<style>
+  :root {
+    --ink: #1c2024;
+    --muted: #5c6470;
+    --line: #dfe3e8;
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --danger: #b3261e;
+    --danger-bg: #fdecea;
+    --ok: #1e6b3c;
+    --ok-bg: #eaf6ee;
+    --warn: #8a5a00;
+    --warn-bg: #fff4e0;
+    --accent: #2c3e50;
+    --focus: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 32px 16px 80px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 28px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 0.95rem; margin-bottom: 14px;
+  }
+  input:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+  button { font-size: 0.95rem; font-weight: 600; padding: 10px 18px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: white; border-color: var(--line); color: var(--ink); }
+  .field-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.92rem; border-bottom: 1px solid #f0f1f3; }
+  .field-row:last-child { border-bottom: none; }
+  .field-row .k { color: var(--muted); }
+  .field-row .v { font-weight: 600; text-align: right; }
+  .banner { border-radius: 8px; padding: 12px 14px; font-size: 0.9rem; margin-bottom: 14px; }
+  .banner.ok { background: var(--ok-bg); color: var(--ok); }
+  .banner.warn { background: var(--warn-bg); color: var(--warn); }
+  .banner.danger { background: var(--danger-bg); color: var(--danger); }
+  .hidden { display: none; }
+  .muted { color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<div class="wrap gate" id="gateScreen">
+  <div class="card">
+    <h1>Admin access</h1>
+    <p class="sub">Enter the admin key.</p>
+    <label for="secretInput">Admin key</label>
+    <input id="secretInput" type="password" autocomplete="off" placeholder="••••••••">
+    <button class="btn-primary" id="unlockBtn" style="width:100%;">Unlock</button>
+    <p class="muted" id="gateError" style="color:var(--danger); display:none;">Incorrect key.</p>
+  </div>
+</div>
+
+<div class="wrap hidden" id="mainScreen">
+  <h1>Mark ID as Received</h1>
+  <p class="sub">For when a guest emails their government ID to risefurnishedstays@gmail.com instead of using the upload page. Save the photo into the same Google Drive "Signed Leases" folder yourself first, then use this to mark the booking complete so reminders stop and the guest gets their confirmation.</p>
+
+  <div class="card">
+    <label for="confCode">Confirmation code</label>
+    <input id="confCode" type="text" placeholder="e.g. ABC1234567" autocomplete="off">
+    <label for="driveUrl">Drive file URL (optional)</label>
+    <input id="driveUrl" type="text" placeholder="https://drive.google.com/file/d/...">
+    <p class="muted" style="margin:-8px 0 14px;">Just for your own reference later -- not required.</p>
+    <button class="btn-primary" id="lookupBtn">Look up booking</button>
+  </div>
+
+  <div id="previewCard" class="card hidden"></div>
+  <div id="actionResult"></div>
+</div>
+
+<script>
+  const secretKey = "rise_admin_secret"; // sessionStorage key name, not the secret itself
+  let adminSecret = sessionStorage.getItem(secretKey) || "";
+  const API_BASE = "https://rise-eta-three.vercel.app"; // CHANGE THIS if your Vercel URL ever changes
+
+  const gateScreen = document.getElementById("gateScreen");
+  const mainScreen = document.getElementById("mainScreen");
+  const gateError = document.getElementById("gateError");
+
+  function showMain() {
+    gateScreen.classList.add("hidden");
+    mainScreen.classList.remove("hidden");
+  }
+
+  async function verifyKey(key) {
+    try {
+      const res = await fetch(API_BASE + "/api/booking-actions?action=preview&confirmationCode=__verify__", {
+        headers: { "x-admin-secret": key },
+      });
+      return res.status !== 401;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  (async () => {
+    if (adminSecret && (await verifyKey(adminSecret))) showMain();
+  })();
+
+  document.getElementById("unlockBtn").addEventListener("click", async () => {
+    const val = document.getElementById("secretInput").value.trim();
+    if (!val) return;
+    const ok = await verifyKey(val);
+    if (ok) {
+      adminSecret = val;
+      sessionStorage.setItem(secretKey, val);
+      showMain();
+    } else {
+      gateError.style.display = "block";
+    }
+  });
+
+  let currentBooking = null;
+
+  document.getElementById("lookupBtn").addEventListener("click", async () => {
+    const code = document.getElementById("confCode").value.trim().toUpperCase();
+    const previewCard = document.getElementById("previewCard");
+    const actionResult = document.getElementById("actionResult");
+    actionResult.innerHTML = "";
+    if (!code) return;
+
+    previewCard.classList.remove("hidden");
+    previewCard.innerHTML = '<p class="muted">Looking up...</p>';
+
+    try {
+      // action=preview is a GET lookup that also happens to return the
+      // booking record -- reused here rather than adding a third lookup
+      // endpoint just for this page.
+      const res = await fetch(API_BASE + "/api/booking-actions?action=preview&confirmationCode=" + encodeURIComponent(code), {
+        headers: { "x-admin-secret": adminSecret },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.booking) {
+        previewCard.innerHTML = '<div class="banner danger">' + (data.error || "Booking not found.") + '</div>';
+        return;
+      }
+
+      currentBooking = data.booking;
+      renderPreview(currentBooking);
+    } catch (e) {
+      previewCard.innerHTML = '<div class="banner danger">Network error: ' + e.message + '</div>';
+    }
+  });
+
+  function renderPreview(booking) {
+    const previewCard = document.getElementById("previewCard");
+    let banner = "";
+    let canMark = true;
+
+    if (!booking.leaseSignedAt) {
+      banner = '<div class="banner warn">This booking\'s lease hasn\'t been signed yet. Sign the lease before marking the ID as received.</div>';
+      canMark = false;
+    } else if (booking.govIdUploadedAt) {
+      banner = '<div class="banner ok">ID already marked as received on ' + new Date(booking.govIdUploadedAt).toLocaleString() + '.</div>';
+      canMark = false;
+    }
+
+    previewCard.innerHTML =
+      '<div class="field-row"><span class="k">Guest</span><span class="v">' + (booking.guestName || "—") + '</span></div>' +
+      '<div class="field-row"><span class="k">Email</span><span class="v">' + (booking.guestEmail || "—") + '</span></div>' +
+      '<div class="field-row"><span class="k">Unit</span><span class="v">' + booking.unitCode + '</span></div>' +
+      '<div class="field-row"><span class="k">Check-in</span><span class="v">' + booking.checkIn + '</span></div>' +
+      '<div class="field-row"><span class="k">Lease signed</span><span class="v">' + (booking.leaseSignedAt ? "Yes" : "No") + '</span></div>' +
+      '<div class="field-row"><span class="k">ID already received</span><span class="v">' + (booking.govIdUploadedAt ? "Yes" : "No") + '</span></div>' +
+      banner +
+      (canMark ? '<button class="btn-primary" id="markBtn" style="margin-top:10px; width:100%;">Mark ID Received &amp; Send Confirmation</button>' : '');
+
+    if (canMark) {
+      document.getElementById("markBtn").addEventListener("click", () => onMarkReceived(booking));
+    }
+  }
+
+  async function onMarkReceived(booking) {
+    const btn = document.getElementById("markBtn");
+    const driveFileUrl = document.getElementById("driveUrl").value.trim();
+    const sure = confirm("This will mark the ID as received for " + booking.confirmationCode + " and send the guest their final booking-complete confirmation email. Continue?");
+    if (!sure) return;
+
+    btn.disabled = true;
+    btn.textContent = "Processing...";
+
+    const actionResult = document.getElementById("actionResult");
+    try {
+      const res = await fetch(API_BASE + "/api/booking-actions?action=mark-id-received", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
+        body: JSON.stringify({ confirmationCode: booking.confirmationCode, driveFileUrl: driveFileUrl || undefined }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        actionResult.innerHTML = '<div class="card"><div class="banner danger">Failed: ' + (data.error || "Unknown error") + '</div></div>';
+        btn.disabled = false;
+        btn.textContent = "Mark ID Received & Send Confirmation";
+        return;
+      }
+
+      actionResult.innerHTML =
+        '<div class="card"><div class="banner ok">Done. ID marked received for ' + data.confirmationCode + '.</div>' +
+        '<p class="muted">Booking-complete email: ' + (data.bookingCompleteEmailSent ? "sent" : "already sent previously, or failed -- check logs") + '</p></div>';
+
+      document.getElementById("previewCard").classList.add("hidden");
+    } catch (e) {
+      actionResult.innerHTML = '<div class="card"><div class="banner danger">Network error: ' + e.message + '</div></div>';
+      btn.disabled = false;
+      btn.textContent = "Mark ID Received & Send Confirmation";
+    }
+  }
+</script>
+</body>
+</html>
