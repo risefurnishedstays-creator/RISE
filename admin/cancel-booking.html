@@ -81,6 +81,7 @@
     border-radius: 999px;
   }
   .branch-pill.full-refund { background: var(--ok-bg); color: var(--ok); }
+  .branch-pill.grace-period { background: var(--ok-bg); color: var(--ok); }
   .branch-pill.non-refundable { background: var(--warn-bg); color: var(--warn); }
   .branch-pill.midstay { background: var(--danger-bg); color: var(--danger); }
   .hidden { display: none; }
@@ -178,8 +179,20 @@
 
   function money(n) { return "$" + Number(n).toLocaleString("en-US"); }
 
+  // "pending-capture" bookings haven't actually been charged yet -- the
+  // card is only authorized/held. Cancelling one releases that hold; it
+  // does NOT issue a Stripe refund (there's nothing to refund). Once a
+  // booking is "confirmed" (captured), the same outcome.refundable=true
+  // case really is a refund of real money. The label should say the
+  // right thing in each case rather than always saying "Refund."
+  function cancelActionLabel(booking, outcome) {
+    if (!outcome.refundable) return "Process";
+    return booking.status === "pending-capture" ? "Release Hold" : "Refund";
+  }
+
   function branchLabel(branch, midstayRule) {
-    if (branch === "full-refund") return "Full refund";
+    if (branch === "grace-period") return "Grace period — full refund/release";
+    if (branch === "full-refund") return "90% rent refund";
     if (branch === "non-refundable") return "Non-refundable";
     if (branch === "midstay") {
       if (midstayRule === 1) return "Mid-stay — termination fee";
@@ -245,10 +258,16 @@
     const pill = '<span class="branch-pill ' + outcome.branch + '">' + branchLabel(outcome.branch, outcome.midstayRule) + '</span>';
 
     let outcomeLine = "";
-    if (outcome.branch === "full-refund") {
+    if (outcome.branch === "grace-period") {
+      outcomeLine =
+        '<div class="field-row"><span class="k">Refund/release amount</span><span class="v">' + money(outcome.refundAmount) + '</span></div>' +
+        '<div class="field-row"><span class="k">&nbsp;&nbsp;— rent (100%)</span><span class="v">' + money(outcome.rentRefund) + '</span></div>' +
+        '<div class="field-row"><span class="k">&nbsp;&nbsp;— cleaning + pet fees</span><span class="v">' + money(outcome.feeRefund) + '</span></div>' +
+        '<div class="field-row"><span class="k">Note</span><span class="v">If card not yet charged, this releases the hold instead</span></div>';
+    } else if (outcome.branch === "full-refund") {
       outcomeLine =
         '<div class="field-row"><span class="k">Refund amount</span><span class="v">' + money(outcome.refundAmount) + '</span></div>' +
-        '<div class="field-row"><span class="k">&nbsp;&nbsp;— rent</span><span class="v">' + money(outcome.rentRefund) + '</span></div>' +
+        '<div class="field-row"><span class="k">&nbsp;&nbsp;— rent (' + (outcome.rentRefundPercent || 100) + '%)</span><span class="v">' + money(outcome.rentRefund) + '</span></div>' +
         '<div class="field-row"><span class="k">&nbsp;&nbsp;— cleaning + pet fees</span><span class="v">' + money(outcome.feeRefund) + '</span></div>';
     } else if (outcome.branch === "non-refundable") {
       outcomeLine =
@@ -285,26 +304,29 @@
       '<p class="muted" style="margin-top:12px;">' + outcome.message + '</p>' +
       midstayNote +
       '<button class="btn-danger" id="confirmBtn" style="margin-top:8px;">Cancel &amp; ' +
-        (outcome.refundable ? "Refund" : "Process") + '</button>' +
+        cancelActionLabel(booking, outcome) + '</button>' +
       '<button class="btn-secondary" id="cancelPreviewBtn" style="margin-top:8px; margin-left:8px;">Never mind</button>';
 
     document.getElementById("cancelPreviewBtn").addEventListener("click", () => {
       previewCard.classList.add("hidden");
     });
 
-    document.getElementById("confirmBtn").addEventListener("click", onConfirmCancel);
+    document.getElementById("confirmBtn").addEventListener("click", () => onConfirmCancel(booking));
   }
 
-  async function onConfirmCancel() {
+  async function onConfirmCancel(booking) {
     const confirmBtn = document.getElementById("confirmBtn");
     const totalDueNow = (currentOutcome.terminationFee || 0) + (currentOutcome.unpaidUsedNightsDue || 0) + (currentOutcome.finalPaymentDue || 0);
     const billingNote = currentOutcome.branch === "midstay" && totalDueNow > 0
       ? "charge " + money(totalDueNow) + " to the guest's card on file and "
       : "";
+    const isPendingCapture = booking.status === "pending-capture";
     const sure = confirm(
       "This will " +
       (currentOutcome.refundable
-        ? "issue a real Stripe refund of " + money(currentOutcome.refundAmount) + " and "
+        ? (isPendingCapture
+            ? "release the " + money(currentOutcome.refundAmount) + " hold on the guest's card (no charge was ever made) and "
+            : "issue a real Stripe refund of " + money(currentOutcome.refundAmount) + " and ")
         : "") +
       billingNote +
       "permanently cancel booking " + currentConfCode + ". This cannot be undone. Continue?"
@@ -326,7 +348,7 @@
       if (!res.ok) {
         actionResult.innerHTML = '<div class="card"><div class="banner danger">Failed: ' + (data.error || "Unknown error") + '</div></div>';
         confirmBtn.disabled = false;
-        confirmBtn.textContent = "Cancel & " + (currentOutcome.refundable ? "Refund" : "Process");
+        confirmBtn.textContent = "Cancel & " + cancelActionLabel(booking, currentOutcome);
         return;
       }
 
@@ -358,6 +380,7 @@
         '<div class="card">' +
         '<div class="banner ok">Done. Booking ' + data.confirmationCode + ' is now "' + data.status + '".</div>' +
         '<div class="field-row"><span class="k">Refund ID</span><span class="v">' + (data.refundId || "—") + '</span></div>' +
+        '<div class="field-row"><span class="k">Canceled authorization</span><span class="v">' + (data.canceledPaymentIntentId || "—") + '</span></div>' +
         '<div class="field-row"><span class="k">Invoices voided</span><span class="v">' + (data.voidedInvoiceIds.length ? data.voidedInvoiceIds.join(", ") : "—") + '</span></div>' +
         billingStatusHtml +
         emailStatusHtml +
@@ -373,7 +396,7 @@
     } catch (e) {
       actionResult.innerHTML = '<div class="card"><div class="banner danger">Network error: ' + e.message + '</div></div>';
       confirmBtn.disabled = false;
-      confirmBtn.textContent = "Cancel & " + (currentOutcome.refundable ? "Refund" : "Process");
+      confirmBtn.textContent = "Cancel & " + cancelActionLabel(booking, currentOutcome);
     }
   }
 
