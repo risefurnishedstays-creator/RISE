@@ -105,8 +105,9 @@ async function handleCheckoutCompleted(session) {
 
   const petsCount = meta.pets ? parseInt(meta.pets, 10) || 0 : 0;
   let schedule = [];
+  let recomputed = null;
   try {
-    const recomputed = priceParts(meta.checkIn, meta.checkOut, petsCount);
+    recomputed = priceParts(meta.checkIn, meta.checkOut, petsCount);
     schedule = (recomputed.paymentDates || []).map((p) => ({ date: p.dateStr, amount: p.amount, nights: p.nights }));
   } catch (e) {
     console.error("Could not recompute payment schedule for", confirmationCode, e.message);
@@ -184,6 +185,16 @@ async function handleCheckoutCompleted(session) {
       checkIn: meta.checkIn,
       checkOut: meta.checkOut,
       nights: meta.nights,
+      // Breakdown fields for the itemized first-payment table -- sourced
+      // from the same recomputed priceParts() result the schedule itself
+      // comes from, so the numbers can never disagree with each other.
+      // Fall back to the dueToday/0 values if recomputation failed above,
+      // so the email still sends (with a less detailed breakdown) rather
+      // than throwing and losing the guest notification entirely.
+      first30: recomputed ? recomputed.first30 : meta.dueToday,
+      cleaning: recomputed ? recomputed.cleaning : 0,
+      pets: recomputed ? recomputed.pets : petsCount,
+      petFee: recomputed ? recomputed.petFee : 0,
       dueToday: meta.dueToday,
       fullTotal: meta.fullTotal,
       schedule,
