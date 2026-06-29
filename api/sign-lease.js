@@ -32,7 +32,7 @@ const { buildLeaseText, buildPetAddendumText } = require("../lib/leaseTemplate")
 const { generateSignedLeasePdf } = require("../lib/leasePdf");
 const { uploadSignedLease, isConfigured: driveConfigured } = require("../lib/googleDrive");
 const { sendEmail } = require("../lib/sendEmail");
-const { checkinInstructionsEmail, unitCheckinPdfAttachment, unitDisplayName, leaseSignedGuestEmail, bookingCompleteEmail, idUploadReminderEmail } = require("../lib/emailTemplates");
+const { checkinInstructionsEmail, unitCheckinPdfAttachment, houseRulesPdfAttachment, unitDisplayName, leaseSignedGuestEmail, bookingCompleteEmail, idUploadReminderEmail } = require("../lib/emailTemplates");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.risefurnishedstays.com");
@@ -216,16 +216,20 @@ async function handleSign(req, res) {
   if (timing.sendNow) {
     try {
       const pdfAttachment = unitCheckinPdfAttachment(booking.unitCode);
+      const rulesAttachment = houseRulesPdfAttachment(booking.pets || 0);
+      const attachments = [pdfAttachment, rulesAttachment].filter(Boolean);
       await sendEmail({
         to: booking.guestEmail,
         subject: `Check-in details for your stay - RISE Furnished Stays`,
         replyTo: "risefurnishedstays@gmail.com",
-        attachments: pdfAttachment ? [pdfAttachment] : undefined,
+        attachments: attachments.length ? attachments : undefined,
         html: checkinInstructionsEmail({
           guestName: booking.guestName,
           unitCode: booking.unitCode,
           checkIn: booking.checkIn,
           checkOut: booking.checkOut,
+          guests: booking.guests,
+          pets: booking.pets,
           confirmationCode: booking.confirmationCode,
           guidebookUrl: "https://www.risefurnishedstays.com/austin-guidebook.html",
         }),
@@ -307,21 +311,40 @@ async function handleUploadId(req, res) {
     });
   }
 
-  // ---- Decode the ID image ----
-  // Accepts whatever image/* data URL the browser produced (JPEG from a
-  // phone camera, PNG from a file picker, etc.) -- captures both the
+  // ---- Decode the ID file ----
+  // Accepts images (JPEG/PNG/etc from a phone camera or file picker), PDFs
+  // (a scanned ID saved as a PDF), and Word docs -- guests sometimes have
+  // their ID as a PDF scan rather than a photo, and a few send a Word doc
+  // even though that's an unusual choice for an ID. Captures both the
   // mimeType and the raw bytes so the Drive upload and the file extension
   // match what the guest actually sent.
+  const ALLOWED_MIME_EXTENSIONS = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/gif": "gif",
+    "image/webp": "webp",
+    "image/heic": "heic",
+    "image/heif": "heif",
+    "image/bmp": "bmp",
+    "image/tiff": "tiff",
+    "application/pdf": "pdf",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  };
   let idImageBytes, mimeType, extension;
   try {
-    const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/.exec(idImageBase64);
-    if (!match) throw new Error("expected a data:image/...;base64, URL");
+    const match = /^data:([a-zA-Z0-9.+/-]+);base64,(.*)$/.exec(idImageBase64);
+    if (!match) throw new Error("expected a data:<mimetype>;base64, URL");
     mimeType = match[1];
+    const isImage = mimeType.startsWith("image/");
+    if (!isImage && !ALLOWED_MIME_EXTENSIONS[mimeType]) {
+      throw new Error(`unsupported file type: ${mimeType}`);
+    }
     idImageBytes = Buffer.from(match[2], "base64");
-    if (idImageBytes.length === 0) throw new Error("empty image data");
-    extension = mimeType.split("/")[1] === "jpeg" ? "jpg" : mimeType.split("/")[1];
+    if (idImageBytes.length === 0) throw new Error("empty file data");
+    extension = ALLOWED_MIME_EXTENSIONS[mimeType] || (isImage ? mimeType.split("/")[1].replace(/[^a-z0-9]/gi, "") : "bin");
   } catch (e) {
-    return res.status(400).json({ error: "Invalid idImageBase64 -- expected a base64-encoded image. " + e.message });
+    return res.status(400).json({ error: "Invalid idImageBase64 -- expected a base64-encoded image, PDF, or Word document. " + e.message });
   }
 
   // ---- Upload to Google Drive (same folder as signed leases) ----
@@ -374,6 +397,8 @@ async function handleUploadId(req, res) {
           unitCode: booking.unitCode,
           checkIn: booking.checkIn,
           checkOut: booking.checkOut,
+          guests: booking.guests,
+          pets: booking.pets,
           confirmationCode: booking.confirmationCode,
         }),
       });

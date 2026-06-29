@@ -24,6 +24,7 @@ const {
   liabilityInvoiceOwnerEmail,
   checkinInstructionsEmail,
   unitCheckinPdfAttachment,
+  houseRulesPdfAttachment,
   bookingCompleteEmail,
 } = require("../lib/emailTemplates");
 
@@ -565,16 +566,20 @@ async function handleMarkLeaseSigned(req, res) {
   if (timing.sendNow) {
     try {
       const pdfAttachment = unitCheckinPdfAttachment(booking.unitCode);
+      const rulesAttachment = houseRulesPdfAttachment(booking.pets || 0);
+      const attachments = [pdfAttachment, rulesAttachment].filter(Boolean);
       await sendEmail({
         to: booking.guestEmail,
         subject: `Check-in details for your stay - RISE Furnished Stays`,
         replyTo: "risefurnishedstays@gmail.com",
-        attachments: pdfAttachment ? [pdfAttachment] : undefined,
+        attachments: attachments.length ? attachments : undefined,
         html: checkinInstructionsEmail({
           guestName: booking.guestName,
           unitCode: booking.unitCode,
           checkIn: booking.checkIn,
           checkOut: booking.checkOut,
+          guests: booking.guests,
+          pets: booking.pets,
           confirmationCode: booking.confirmationCode,
           guidebookUrl: "https://www.risefurnishedstays.com/austin-guidebook.html",
         }),
@@ -669,6 +674,8 @@ async function handleMarkIdReceived(req, res) {
           unitCode: booking.unitCode,
           checkIn: booking.checkIn,
           checkOut: booking.checkOut,
+          guests: booking.guests,
+          pets: booking.pets,
           confirmationCode: booking.confirmationCode,
         }),
       });
