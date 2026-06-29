@@ -259,7 +259,7 @@
 
 /* RISE — booking-stage step indicator.
    Shows the guest where they are in the booking flow: Select Dates and Unit
-   > Book & Pay > Sign Lease > Send ID and Complete Booking. Injected right
+   > Book & Pay > Sign Lease > Upload ID > Confirmation. Injected right
    below the header on every flow page; pages outside the flow (home, legal
    pages, guidebook, contact) are left untouched. Self-contained IIFE so a
    failure here can never affect the mobile nav drawer above.
@@ -279,7 +279,8 @@
     { key: 'select', label: 'Select Dates & Unit', rot: -2 },
     { key: 'bookpay', label: 'Book & Pay', rot: 1.5 },
     { key: 'sign', label: 'Sign Lease', rot: -1.5 },
-    { key: 'confirm', label: 'Send ID and Complete Booking', rot: 2 }
+    { key: 'upload', label: 'Upload ID', rot: 2 },
+    { key: 'confirm', label: 'Confirmation', rot: -2 }
   ];
 
   // Map each flow page to the step key that is "current" on that page.
@@ -289,6 +290,7 @@
     'unit-d.html': ['select'],
     'checkout.html': ['bookpay'],
     'lease.html': ['sign'],
+    'id-upload.html': ['upload'],
     'confirmation.html': ['confirm']
   };
 

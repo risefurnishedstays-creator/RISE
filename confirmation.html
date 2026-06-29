@@ -99,17 +99,6 @@
     .foot-grid { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 560px) { .foot-grid { grid-template-columns: 1fr; } }
-  /* STEP STRIP */
-  .rise-stepstrip { background: var(--paper-2); border-bottom: 2px dashed color-mix(in oklab, var(--ink) 25%, transparent); padding: 16px 0 18px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .rise-stepstrip-inner { display: flex; align-items: center; justify-content: center; gap: 14px; max-width: 1120px; margin: 0 auto; padding: 4px 18px; font-family: var(--font-body); font-size: 16px; white-space: nowrap; min-width: max-content; }
-  .rise-step { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: var(--radius-sketch); border: 2px solid var(--line); background: var(--paper); color: var(--ink-soft); font-weight: 500; box-shadow: 2px 2px 0 var(--ink); }
-  .rise-step .num { width: 19px; height: 19px; flex: none; border-radius: 50%; border: 2px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; }
-  .rise-step.done { color: var(--ink); border-radius: var(--radius-sketch-2); }
-  .rise-step.done .num { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-  .rise-step.current { color: #fff; background: var(--accent); border-color: var(--line); font-weight: 700; box-shadow: 3px 3px 0 var(--ink); }
-  .rise-step.current .num { border-color: #fff; }
-  .rise-step-sep { color: var(--ink-soft); opacity: .6; font-family: var(--font-body); font-weight: 700; font-size: 26px; line-height: 1; }
-  @media (max-width: 640px) { .rise-stepstrip-inner { font-size: 14.5px; justify-content: flex-start; gap: 10px; } .rise-step { padding: 6px 10px; } }
 </style>
 </head>
 <body>
@@ -138,22 +127,6 @@
     </div>
   </div>
 </header>
-
-<nav class="rise-stepstrip" aria-label="Booking progress">
-  <div class="rise-stepstrip-inner">
-    <span class="rise-step done" style="transform: rotate(-2deg);"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step done" style="transform: rotate(1.5deg);"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step done" style="transform: rotate(-1.5deg);"><span class="num">&#10003;</span>Sign Lease</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step done" style="transform: rotate(2deg);"><span class="num">&#10003;</span>Upload ID</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step current" style="transform: rotate(-2deg);"><span class="num">5</span>Confirmation</span>
-  </div>
-</nav>
-<script>
-  (function () {
-    var current = document.querySelector('.rise-stepstrip .rise-step.current');
-    if (current) current.scrollIntoView({ block: 'nearest', inline: 'center' });
-  })();
-</script>
 
 <section class="cf-section" data-screen-label="Confirmation">
   <div class="wrap">
