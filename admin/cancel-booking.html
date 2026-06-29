@@ -113,6 +113,9 @@
     <label for="noticeDate">Date notice was given</label>
     <input id="noticeDate" type="date">
     <p class="muted" style="margin:-8px 0 14px;">Defaults to today. Backdate this if the guest contacted you earlier than you're processing it now.</p>
+    <label for="bookingDateOverride">Booking date (optional override)</label>
+    <input id="bookingDateOverride" type="date">
+    <p class="muted" style="margin:-8px 0 14px;">Only needed if this booking predates the system tracking its own booking date automatically (older bookings won't have one stored) -- leave blank otherwise. If set, this overrides whatever's on file for the 5-day grace window calculation.</p>
     <button class="btn-primary" id="lookupBtn">Look up &amp; preview</button>
   </div>
 
@@ -176,6 +179,7 @@
   let currentOutcome = null;
   let currentConfCode = null;
   let currentNoticeDate = null;
+  let currentBookingDateOverride = null;
 
   function money(n) { return "$" + Number(n).toLocaleString("en-US"); }
 
@@ -206,6 +210,7 @@
   document.getElementById("lookupBtn").addEventListener("click", async () => {
     const confCode = document.getElementById("confCode").value.trim();
     const noticeDate = document.getElementById("noticeDate").value || undefined;
+    const bookingDateOverride = document.getElementById("bookingDateOverride").value || undefined;
     const previewCard = document.getElementById("previewCard");
     const actionResult = document.getElementById("actionResult");
     actionResult.innerHTML = "";
@@ -221,6 +226,7 @@
     try {
       const params = new URLSearchParams({ action: "preview", confirmationCode: confCode });
       if (noticeDate) params.set("noticeDate", noticeDate);
+      if (bookingDateOverride) params.set("bookingDateOverride", bookingDateOverride);
       const res = await fetch(API_BASE + "/api/booking-actions?" + params.toString(), {
         headers: { "x-admin-secret": adminSecret },
       });
@@ -239,6 +245,7 @@
       currentBooking = data.booking;
       currentConfCode = confCode;
       currentNoticeDate = noticeDate;
+      currentBookingDateOverride = bookingDateOverride;
 
       if (data.alreadyCancelled) {
         previewCard.innerHTML =
@@ -247,13 +254,13 @@
       }
 
       currentOutcome = data.outcome;
-      renderPreview(data.booking, data.outcome);
+      renderPreview(data.booking, data.outcome, data.effectiveBookingDate);
     } catch (e) {
       previewCard.innerHTML = '<div class="banner danger">Network error: ' + e.message + '</div>';
     }
   });
 
-  function renderPreview(booking, outcome) {
+  function renderPreview(booking, outcome, effectiveBookingDate) {
     const previewCard = document.getElementById("previewCard");
     const pill = '<span class="branch-pill ' + outcome.branch + '">' + branchLabel(outcome.branch, outcome.midstayRule) + '</span>';
 
@@ -293,6 +300,13 @@
       ? '<div class="banner warn">Mid-stay cancellation: any termination fee or final payment due above will be charged automatically to the card on file when you confirm. Future not-yet-owed installments are voided.</div>'
       : "";
 
+    const bookingDateDisplay = effectiveBookingDate
+      ? new Date(effectiveBookingDate).toLocaleString()
+      : null;
+    const bookingDateRow = bookingDateDisplay
+      ? '<div class="field-row"><span class="k">Booking date used</span><span class="v">' + bookingDateDisplay + '</span></div>'
+      : '<div class="banner danger" style="margin-top:8px;">No booking date on file for this booking, and no override was entered -- the 5-day grace window cannot be evaluated correctly. Enter the actual booking date in the "Booking date (optional override)" field above and look up again before cancelling.</div>';
+
     previewCard.innerHTML =
       '<h3 style="margin-top:0;">' + pill + '</h3>' +
       '<div class="field-row"><span class="k">Guest</span><span class="v">' + (booking.guestName || "—") + '</span></div>' +
@@ -300,6 +314,7 @@
       '<div class="field-row"><span class="k">Unit</span><span class="v">' + booking.unitCode + '</span></div>' +
       '<div class="field-row"><span class="k">Check-in</span><span class="v">' + booking.checkIn + '</span></div>' +
       '<div class="field-row"><span class="k">Check-out</span><span class="v">' + booking.checkOut + '</span></div>' +
+      bookingDateRow +
       outcomeLine +
       '<p class="muted" style="margin-top:12px;">' + outcome.message + '</p>' +
       midstayNote +
@@ -341,7 +356,7 @@
       const res = await fetch(API_BASE + "/api/booking-actions?action=cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-admin-secret": adminSecret },
-        body: JSON.stringify({ confirmationCode: currentConfCode, noticeDate: currentNoticeDate }),
+        body: JSON.stringify({ confirmationCode: currentConfCode, noticeDate: currentNoticeDate, bookingDateOverride: currentBookingDateOverride }),
       });
       const data = await res.json();
 
