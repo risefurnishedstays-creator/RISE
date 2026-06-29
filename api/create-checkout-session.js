@@ -85,6 +85,21 @@ module.exports = async function handler(req, res) {
       // THIS is the key line: save the card for future off-session charges
       payment_intent_data: {
         setup_future_usage: "off_session",
+        // Hold (authorize) the first payment instead of charging it
+        // immediately. The card is captured 5 days later by the daily cron
+        // (api/cron/scheduled-emails.js), once the free-cancellation grace
+        // window has passed -- if the guest cancels before then, the
+        // authorization is simply cancelled/released and Stripe's
+        // processing fee is never charged at all, since no real charge
+        // ever happened. Standard card-network authorization holds are
+        // valid for about 7 days for a customer-present transaction like
+        // this one, comfortably covering the 5-day window with a 2-day
+        // buffer for capture retries. setup_future_usage above is
+        // independent of this and still saves the card normally for the
+        // LATER installments, which remain on their existing
+        // immediate-charge (non-held) schedule -- this hold applies ONLY
+        // to this first payment.
+        capture_method: "manual",
       },
       // Everything the webhook needs to set up future invoices.
       // Stripe metadata values must be strings, so we JSON-encode the schedule.

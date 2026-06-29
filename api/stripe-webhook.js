@@ -1,24 +1,46 @@
 // api/stripe-webhook.js
-// Fires when Stripe confirms events. Handles two:
+// Fires when Stripe confirms events. Handles three:
 //
-// 1. checkout.session.completed  -> the "due today" payment succeeded.
-//    We then:
+// 1. checkout.session.completed  -> the guest finished checkout and their
+//    card was AUTHORIZED (held) for the first payment -- NOT yet charged.
+//    capture_method: 'manual' on the PaymentIntent (set in
+//    create-checkout-session.js) means Stripe holds the funds instead of
+//    capturing immediately. We then:
 //      a. Grab the saved payment method from the PaymentIntent
 //      b. Attach it to a reusable Customer as the default for invoices
-//      c. Create a scheduled, auto-charging Stripe Invoice for each
-//         future installment date (Stripe charges the saved card on
-//         each due date automatically -- no cron needed on our side)
-//      d. Send confirmation emails to guest + owner
+//      c. Save the booking with status "pending-capture"
+//      d. Send a "your dates are reserved, card not charged yet" email to
+//         the guest, and a lighter heads-up to the owner
+//    Future installment invoices are NOT created yet here -- that only
+//    happens once the first payment is actually captured (see #3 below),
+//    since creating them now would be premature if the guest cancels
+//    during the 5-day grace window.
 //
 // 2. invoice.payment_failed -> a future installment charge failed.
 //    We email the owner so they can follow up. (Stripe also auto-emails
 //    the guest via its built-in dunning if enabled in the dashboard.)
+//
+// 3. payment_intent.amount_capturable_updated, when amount_capturable
+//    drops to 0 after a capture (i.e. the capture itself succeeded) ->
+//    the first payment is now actually charged. We then:
+//      a. Update the booking status to "confirmed"
+//      b. Create one auto-charging invoice per future installment
+//      c. Send the real payment-confirmed email to the guest, and the
+//         full booking-details email to the owner
+//    This event ALSO fires at authorization time (capturable amount goes
+//    from 0 to the full amount) -- handleAmountCapturableUpdated ignores
+//    that case and only acts when amount_capturable has dropped to 0,
+//    which only happens after capture (or after the authorization expires
+//    uncaptured, which canceled-booking handling should prevent in
+//    practice since the cron captures before that 7-day window closes).
 
 const Stripe = require("stripe");
 const { sendEmail } = require("../lib/sendEmail");
-const { saveBooking, getBooking } = require("../lib/bookings");
-const { priceParts } = require("../lib/pricing");
+const { saveBooking, getBooking, updateBookingStatus, listAllConfirmedBookings } = require("../lib/bookings");
+const { priceParts, key, addDays } = require("../lib/pricing");
 const {
+  bookingReservedEmail,
+  ownerReservationPendingEmail,
   guestConfirmationEmail,
   ownerNotificationEmail,
   paymentFailedOwnerEmail,
@@ -56,6 +78,8 @@ module.exports = async function handler(req, res) {
       await handleCheckoutCompleted(event.data.object);
     } else if (event.type === "invoice.payment_failed") {
       await handleInvoiceFailed(event.data.object);
+    } else if (event.type === "payment_intent.amount_capturable_updated") {
+      await handleAmountCapturableUpdated(event.data.object);
     }
   } catch (err) {
     // Log but return 200 so Stripe doesn't retry endlessly. We don't want
@@ -70,19 +94,15 @@ async function handleCheckoutCompleted(session) {
   const meta = session.metadata || {};
   const confirmationCode = session.id.slice(-10).toUpperCase();
 
-  // Retrieve the PaymentIntent to get the saved payment method
+  // Retrieve the PaymentIntent to get the saved payment method. With
+  // capture_method: manual, session.payment_status is "unpaid" here --
+  // that's expected and correct, NOT an error -- it just means the card
+  // is held, not charged. The actual charge happens later via
+  // handleAmountCapturableUpdated, once api/cron/scheduled-emails.js
+  // calls paymentIntents.capture() on day 5.
   const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
   const paymentMethodId = paymentIntent.payment_method;
 
-  // The full installment schedule is recomputed HERE rather than trusted
-  // from meta.paymentSchedule. Stripe metadata values are capped at 500
-  // characters -- for longer stays (4+ installments), the JSON-stringified
-  // schedule array silently exceeds that limit and gets truncated by
-  // Stripe, which is what caused confirmation emails to show only the
-  // first 1-2 installments instead of the full list for long bookings.
-  // priceParts() is a pure function of checkIn/checkOut/pets (all of which
-  // ARE safely within metadata limits as plain strings), so recomputing it
-  // here reproduces the exact same schedule with no size limit at all.
   const petsCount = meta.pets ? parseInt(meta.pets, 10) || 0 : 0;
   let schedule = [];
   try {
@@ -90,14 +110,10 @@ async function handleCheckoutCompleted(session) {
     schedule = (recomputed.paymentDates || []).map((p) => ({ date: p.dateStr, amount: p.amount, nights: p.nights }));
   } catch (e) {
     console.error("Could not recompute payment schedule for", confirmationCode, e.message);
-    // Fall back to the (possibly truncated) metadata value rather than
-    // showing nothing, in the unlikely event recomputation itself fails.
     try { schedule = JSON.parse(meta.paymentSchedule || "[]"); } catch (_) { schedule = []; }
   }
 
   // ---- Create a reusable Customer with the saved card as default ----
-  // (Moved above saveBooking so we have customerId in hand to store on the
-  // booking record -- cancel-booking.js needs it later to find/void invoices.)
   let customerId = session.customer;
   if (!customerId) {
     const customer = await stripe.customers.create({
@@ -109,7 +125,6 @@ async function handleCheckoutCompleted(session) {
   }
 
   if (paymentMethodId) {
-    // Attach the card to the customer (may already be attached; ignore that error)
     try {
       await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
     } catch (e) {
@@ -120,68 +135,49 @@ async function handleCheckoutCompleted(session) {
     });
   }
 
-  // ---- Save the booking to storage (powers availability + outbound iCal) ----
-  // paymentIntentId + stripeCustomerId are required for cancel-booking.js to
-  // later issue refunds (refunds.create needs a payment_intent) and find/void
-  // any not-yet-charged installment invoices (invoices.list needs a customer).
+  // ---- Save the booking as "pending-capture" -- NOT "confirmed" yet ----
+  // Still blocks the calendar (listBookings' activeOnly filter only
+  // excludes status "cancelled", so this status blocks availability the
+  // same as "confirmed" does) and is fully usable for lease-signing and
+  // ID upload, which don't gate on status at all. paymentIntentId +
+  // stripeCustomerId are required for the day-5 capture step and for
+  // cancel-booking.js to cancel the authorization or issue a refund.
+  const captureScheduledFor = key(addDays(new Date(), 5));
   try {
     await saveBooking({
       unitCode: meta.unitCode,
       confirmationCode,
       guestName: meta.guestName,
       guestEmail: meta.guestEmail || session.customer_email,
+      guestPhone: meta.guestPhone,
+      guestCountry: meta.guestCountry,
+      guestComments: meta.guestComments,
       checkIn: meta.checkIn,
       checkOut: meta.checkOut,
       nights: meta.nights,
-      pets: meta.pets ? parseInt(meta.pets, 10) || 0 : 0, // needed by cancellationOutcome() to refund pet fees correctly
-      status: "confirmed",
+      pets: meta.pets ? parseInt(meta.pets, 10) || 0 : 0,
+      status: "pending-capture",
       paymentIntentId: session.payment_intent,
       stripeCustomerId: customerId,
+      captureScheduledFor,
+      dueToday: meta.dueToday,
+      fullTotal: meta.fullTotal,
+      unitName: meta.unitName,
+      // Stash the recomputed schedule so the day-5 capture step (and the
+      // eventual confirmation emails) don't need to recompute it again or
+      // rely on the metadata's possibly-truncated copy.
+      pendingSchedule: schedule,
     });
   } catch (e) {
-    // Don't fail the whole webhook if storage hiccups -- payment already went
-    // through. Log loudly so you can backfill the booking manually if needed.
     console.error("CRITICAL: booking saved in Stripe but NOT in availability store:", e.message, "confirmation:", confirmationCode);
   }
 
-  // ---- Create one auto-charging invoice per future installment ----
-  for (const inst of schedule) {
-    const dueDate = new Date(inst.date + "T12:00:00Z");
-    const nowSec = Math.floor(Date.now() / 1000);
-    const dueSec = Math.floor(dueDate.getTime() / 1000);
-
-    // Invoice item (the line on the invoice)
-    await stripe.invoiceItems.create({
-      customer: customerId,
-      amount: inst.amount * 100,
-      currency: "usd",
-      description: `${meta.unitName} — ${inst.nights} nights (installment due ${inst.date})`,
-    });
-
-    // The invoice itself: charge automatically against the saved card.
-    // If the due date is in the future, schedule it; if somehow past, charge now.
-    const invoiceParams = {
-      customer: customerId,
-      collection_method: "charge_automatically",
-      auto_advance: true,
-      metadata: { confirmationCode, installmentDate: inst.date, unitCode: meta.unitCode || "" },
-      description: `RISE Furnished Stays installment — ${meta.unitName}`,
-    };
-
-    if (dueSec > nowSec + 3600) {
-      // Schedule for the due date (Stripe finalizes & charges then)
-      invoiceParams.automatically_finalizes_at = dueSec;
-    }
-
-    await stripe.invoices.create(invoiceParams);
-  }
-
-  // ---- Send confirmation emails ----
+  // ---- Send "reserved, not yet charged" emails ----
   await sendEmail({
     to: meta.guestEmail || session.customer_email,
-    subject: `Booking Confirmed — ${meta.unitName || "RISE Furnished Stays"}`,
-    replyTo: "risefurnishedstays@gmail.com", // sender address is unmonitored -- route any reply to the real inbox
-    html: guestConfirmationEmail({
+    subject: `Reservation Held — ${meta.unitName || "RISE Furnished Stays"}`,
+    replyTo: "risefurnishedstays@gmail.com",
+    html: bookingReservedEmail({
       guestName: meta.guestName || "Guest",
       unitCode: meta.unitCode,
       unitName: meta.unitName || "your unit",
@@ -197,23 +193,158 @@ async function handleCheckoutCompleted(session) {
 
   await sendEmail({
     to: "risefurnishedstays@gmail.com",
-    subject: `New Booking: ${meta.unitName} (${meta.checkIn} to ${meta.checkOut})`,
-    html: ownerNotificationEmail({
+    subject: `New Reservation (Pending): ${meta.unitName} (${meta.checkIn} to ${meta.checkOut})`,
+    html: ownerReservationPendingEmail({
       guestName: meta.guestName || "Guest",
       guestEmail: meta.guestEmail || session.customer_email,
       guestPhone: meta.guestPhone,
       guestCountry: meta.guestCountry,
-      guestComments: meta.guestComments,
       unitName: meta.unitName || "Unit",
       checkIn: meta.checkIn,
       checkOut: meta.checkOut,
       nights: meta.nights,
       dueToday: meta.dueToday,
-      fullTotal: meta.fullTotal,
-      schedule,
       confirmationCode,
+      captureScheduledFor,
     }),
   });
+}
+
+// =========================================================================
+// Fires on every amount_capturable change -- including authorization
+// itself (0 -> full amount), which we deliberately ignore here since
+// handleCheckoutCompleted already handles that moment. Only acts when
+// amount_capturable has dropped to 0, which happens after a successful
+// capture (the case we care about) or after cancellation/expiry (where
+// there's nothing further to do -- the booking's already been or will be
+// marked cancelled through the normal cancel-booking flow).
+// =========================================================================
+async function handleAmountCapturableUpdated(paymentIntent) {
+  if (paymentIntent.amount_capturable !== 0) return; // not a post-capture event
+
+  // Find the booking this PaymentIntent belongs to. We don't have the
+  // confirmationCode directly on the PaymentIntent (Checkout-created
+  // PaymentIntents don't inherit the Session's metadata automatically),
+  // but every booking this matters for was saved with paymentIntentId
+  // === this id.
+  const confirmationCode = await findConfirmationCodeByPaymentIntent(paymentIntent.id);
+  if (!confirmationCode) {
+    // Not one of our first-payment PaymentIntents (e.g. a later
+    // installment, which never uses manual capture) -- nothing to do.
+    return;
+  }
+
+  const booking = await getBooking(confirmationCode);
+  if (!booking) {
+    console.error("CRITICAL: amount_capturable_updated for known paymentIntent but booking not found:", confirmationCode);
+    return;
+  }
+
+  // Idempotency: if this booking is already confirmed, this event has
+  // already been processed (Stripe can redeliver webhooks).
+  if (booking.status === "confirmed") return;
+
+  // Only proceed if the PaymentIntent actually succeeded (capture
+  // completed) -- amount_capturable can also drop to 0 if the
+  // authorization was canceled instead of captured, which the
+  // cancellation flow handles separately and shouldn't be treated as a
+  // successful payment here.
+  if (paymentIntent.status !== "succeeded") return;
+
+  const schedule = booking.pendingSchedule || [];
+
+  // ---- Create one auto-charging invoice per future installment, now
+  // that the first payment has actually succeeded ----
+  for (const inst of schedule) {
+    const dueDate = new Date(inst.date + "T12:00:00Z");
+    const nowSec = Math.floor(Date.now() / 1000);
+    const dueSec = Math.floor(dueDate.getTime() / 1000);
+
+    await stripe.invoiceItems.create({
+      customer: booking.stripeCustomerId,
+      amount: inst.amount * 100,
+      currency: "usd",
+      description: `${booking.unitName || "Unit " + booking.unitCode} — ${inst.nights} nights (installment due ${inst.date})`,
+    });
+
+    const invoiceParams = {
+      customer: booking.stripeCustomerId,
+      collection_method: "charge_automatically",
+      auto_advance: true,
+      metadata: { confirmationCode, installmentDate: inst.date, unitCode: booking.unitCode || "" },
+      description: `RISE Furnished Stays installment — ${booking.unitName || "Unit " + booking.unitCode}`,
+    };
+
+    if (dueSec > nowSec + 3600) {
+      invoiceParams.automatically_finalizes_at = dueSec;
+    }
+
+    await stripe.invoices.create(invoiceParams);
+  }
+
+  try {
+    await updateBookingStatus(confirmationCode, { status: "confirmed", capturedAt: new Date().toISOString() });
+  } catch (e) {
+    console.error("CRITICAL: payment captured but booking status NOT updated to confirmed:", confirmationCode, e.message);
+  }
+
+  // ---- Send the real payment-confirmed emails ----
+  try {
+    await sendEmail({
+      to: booking.guestEmail,
+      subject: `Booking Confirmed — ${booking.unitName || "RISE Furnished Stays"}`,
+      replyTo: "risefurnishedstays@gmail.com",
+      html: guestConfirmationEmail({
+        guestName: booking.guestName || "Guest",
+        unitCode: booking.unitCode,
+        unitName: booking.unitName || "your unit",
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        nights: booking.nights,
+        dueToday: booking.dueToday,
+        fullTotal: booking.fullTotal,
+        schedule,
+        confirmationCode,
+      }),
+    });
+  } catch (e) {
+    console.error("Guest payment-confirmed email failed (non-fatal) for", confirmationCode, e.message);
+  }
+
+  try {
+    await sendEmail({
+      to: "risefurnishedstays@gmail.com",
+      subject: `Payment Captured: ${booking.unitName} (${booking.checkIn} to ${booking.checkOut})`,
+      html: ownerNotificationEmail({
+        guestName: booking.guestName || "Guest",
+        guestEmail: booking.guestEmail,
+        guestPhone: booking.guestPhone,
+        guestCountry: booking.guestCountry,
+        guestComments: booking.guestComments,
+        unitName: booking.unitName || "Unit",
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        nights: booking.nights,
+        dueToday: booking.dueToday,
+        fullTotal: booking.fullTotal,
+        schedule,
+        confirmationCode,
+      }),
+    });
+  } catch (e) {
+    console.error("Owner payment-confirmed email failed (non-fatal) for", confirmationCode, e.message);
+  }
+}
+
+// Scans for the booking whose paymentIntentId matches -- there's no
+// direct "find booking by payment intent" index, but booking volume here
+// is small enough that listing every confirmed-or-pending booking and
+// filtering in memory is fine. If this ever needs to scale, a
+// paymentIntentId -> confirmationCode reverse-index key would be the fix.
+async function findConfirmationCodeByPaymentIntent(paymentIntentId) {
+  const all = await listAllConfirmedBookings();
+  const match = all.find((b) => b.paymentIntentId === paymentIntentId);
+  return match ? match.confirmationCode : null;
 }
 
 async function handleInvoiceFailed(invoice) {

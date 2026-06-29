@@ -115,7 +115,7 @@ async function handlePreview(req, res) {
   }
 
   const { lastPaymentPaid, finalPeriodPaid } = await determinePaymentStatus(booking, noticeDate);
-  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid);
+  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid, booking.createdAt);
   return res.status(200).json({ booking, outcome, alreadyCancelled: false });
 }
 
@@ -181,10 +181,19 @@ async function handleCancel(req, res) {
   }
 
   const { lastPaymentPaid, finalPeriodPaid } = await determinePaymentStatus(booking, noticeDate);
-  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid);
+  const outcome = cancellationOutcome(booking.checkIn, booking.checkOut, noticeDate, booking.pets, lastPaymentPaid, finalPeriodPaid, booking.createdAt);
 
   // ---- Stripe: refund (if applicable -- only the pre-arrival branches) ----
+  // If the booking is still "pending-capture" (within the 5-day grace
+  // window, card authorized but never charged), there's nothing to
+  // refund -- refunds.create only works on a CAPTURED charge. Instead,
+  // cancel the PaymentIntent outright, which releases the authorization
+  // hold with no Stripe processing fee ever having been incurred (this is
+  // the entire point of the hold-then-capture flow). If the booking has
+  // already moved past pending-capture (status "confirmed"), the normal
+  // refund path applies as before.
   let refund = null;
+  let canceledPaymentIntent = null;
   if (outcome.refundable && outcome.refundAmount > 0) {
     if (!booking.paymentIntentId) {
       console.error(
@@ -192,6 +201,13 @@ async function handleCancel(req, res) {
         confirmationCode,
         "-- refund must be issued manually in the Stripe dashboard."
       );
+    } else if (booking.status === "pending-capture") {
+      try {
+        canceledPaymentIntent = await stripe.paymentIntents.cancel(booking.paymentIntentId);
+      } catch (e) {
+        console.error("Stripe PaymentIntent cancellation failed for", confirmationCode, e.message);
+        return res.status(502).json({ error: "Stripe authorization cancellation failed: " + e.message });
+      }
     } else {
       try {
         refund = await stripe.refunds.create({
@@ -326,6 +342,7 @@ async function handleCancel(req, res) {
       midstayRule: outcome.midstayRule || null,
       refundAmount: outcome.refundAmount,
       refundId: refund ? refund.id : null,
+      canceledPaymentIntentId: canceledPaymentIntent ? canceledPaymentIntent.id : null,
       liabilityEndDate: outcome.liabilityEndDate,
       terminationFee: outcome.terminationFee || 0,
       unpaidUsedNightsDue: outcome.unpaidUsedNightsDue || 0,
@@ -388,6 +405,7 @@ async function handleCancel(req, res) {
     status: newStatus,
     outcome,
     refundId: refund ? refund.id : null,
+    canceledPaymentIntentId: canceledPaymentIntent ? canceledPaymentIntent.id : null,
     billedInvoiceId: billedInvoice ? billedInvoice.id : null,
     billingError,
     guestEmailError,
