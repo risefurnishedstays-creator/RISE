@@ -2,7 +2,9 @@
 // Handles submissions from the "Contact Us" form on the website.
 // Sends the submission details to risefurnishedstays@gmail.com.
 //
-// Frontend should POST JSON here as: { name, email, phone, message }
+// Frontend should POST JSON here as: { name, email, phone, message,
+// unit, guests, pets } -- unit/guests/pets are optional extras specific
+// to the booking-inquiry contact form; any other caller can omit them.
 
 const { sendEmail } = require("../lib/sendEmail");
 const { contactFormEmail, contactConfirmationGuestEmail } = require("../lib/emailTemplates");
@@ -22,7 +24,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { name, email, phone, message } = req.body || {};
+    const { name, email, phone, message, unit, guests, pets } = req.body || {};
 
     // Basic validation
     if (!name || !email || !message) {
@@ -37,7 +39,7 @@ module.exports = async function handler(req, res) {
     await sendEmail({
       to: "risefurnishedstays@gmail.com",
       subject: `New Contact Form Submission from ${name}`,
-      html: contactFormEmail({ name, email, phone, message }),
+      html: contactFormEmail({ name, email, phone, message, unit, guests, pets }),
       replyTo: email, // lets you hit "reply" and respond straight to the guest
     });
 
@@ -50,7 +52,7 @@ module.exports = async function handler(req, res) {
       await sendEmail({
         to: email,
         subject: "We received your message - RISE Furnished Stays",
-        html: contactConfirmationGuestEmail({ name, email, phone, message }),
+        html: contactConfirmationGuestEmail({ name, email, phone, message, unit, guests, pets }),
         replyTo: "risefurnishedstays@gmail.com",
       });
     } catch (e) {
