@@ -136,6 +136,17 @@
 
   /* ---------- state ---------- */
   var checkIn = null, checkOut = null, hoverDay = null;
+  // Tracks the previously-committed checkout date purely for VISUAL
+  // highlighting while the guest is reopening the checkout field to pick a
+  // new one. checkOut itself must go back to null when that field reopens
+  // (see openCal()'s comment on why -- pickDay()'s branch logic depends on
+  // it), but that means dayCls() has no way to know which day to still
+  // show as selected in the meantime. Without this, reopening checkout
+  // would show the right MONTH (fixed separately) but no highlighted day
+  // at all, leaving the guest with no visual confirmation of what they'd
+  // already picked. Cleared as soon as a new checkout is actually picked
+  // (pickDay) or the selection is cleared entirely (the "clear" action).
+  var previewCheckOut = null;
   var calRef = new Date(firstOpen.getFullYear(), firstOpen.getMonth(), 1);
   var calOpen = false, breakdownOpen = false, pickMode = 'in';
 
@@ -186,8 +197,13 @@
     else if (turnover) cls += ' booked turnover sel';
     else cls += ' sel';
     var inStart = checkIn && key(date) === key(checkIn);
-    var inEnd = checkOut && key(date) === key(checkOut);
-    var rangeHi = checkIn && checkOut && date > checkIn && date < checkOut;
+    // Highlight the REAL checkOut if one is set, otherwise fall back to
+    // previewCheckOut -- the previously-picked checkout date, shown only
+    // while that field is reopened and checkOut itself is temporarily null
+    // (see previewCheckOut's declaration comment above for why).
+    var effectiveCheckOut = checkOut || previewCheckOut;
+    var inEnd = effectiveCheckOut && key(date) === key(effectiveCheckOut);
+    var rangeHi = checkIn && effectiveCheckOut && date > checkIn && date < effectiveCheckOut;
     if (inStart) cls += ' sel-start';
     else if (inEnd) cls += ' sel-end';
     else if (rangeHi) cls += ' in-range';
@@ -224,14 +240,14 @@
   function pickDay(s) {
     var d = parseKey(s);
     if (isTurnover(d)) {
-      if (checkIn && !checkOut && d > checkIn && rangeClear(checkIn, d)) { checkOut = d; pickMode = 'in'; }
+      if (checkIn && !checkOut && d > checkIn && rangeClear(checkIn, d)) { checkOut = d; pickMode = 'in'; previewCheckOut = null; }
       else { return; }
     } else {
       if (!isAvail(d)) return;
-      if (!checkIn || checkOut) { checkIn = d; checkOut = null; pickMode = 'out'; }
-      else if (d <= checkIn) { checkIn = d; checkOut = null; pickMode = 'out'; }
-      else if (!rangeClear(checkIn, d)) { checkIn = d; checkOut = null; pickMode = 'out'; }
-      else { checkOut = d; pickMode = 'in'; }
+      if (!checkIn || checkOut) { checkIn = d; checkOut = null; pickMode = 'out'; previewCheckOut = null; }
+      else if (d <= checkIn) { checkIn = d; checkOut = null; pickMode = 'out'; previewCheckOut = null; }
+      else if (!rangeClear(checkIn, d)) { checkIn = d; checkOut = null; pickMode = 'out'; previewCheckOut = null; }
+      else { checkOut = d; pickMode = 'in'; previewCheckOut = null; }
     }
     hoverDay = null;
     renderCalPopover();
@@ -247,7 +263,7 @@
     if (nav) { calRef.setMonth(calRef.getMonth() + (nav.dataset.nav === 'prev' ? -1 : 1)); renderCalPopover(); return; }
     var act = e.target.closest('[data-act]');
     if (act) {
-      if (act.dataset.act === 'clear') { checkIn = null; checkOut = null; hoverDay = null; pickMode = 'in'; renderCalPopover(); updateFieldActive(); updateCard(); }
+      if (act.dataset.act === 'clear') { checkIn = null; checkOut = null; previewCheckOut = null; hoverDay = null; pickMode = 'in'; renderCalPopover(); updateFieldActive(); updateCard(); }
       else { closeCal(); }
       return;
     }
@@ -277,6 +293,11 @@
     // to checkout.html's date picker for the identical underlying bug.
     if (mode === 'out' && checkIn && checkOut) {
       checkOut = null;
+      previewCheckOut = previousCheckOut;
+    } else if (mode !== 'out') {
+      // Reopening the CHECK-IN field instead -- any stale preview from a
+      // previous checkout-edit session is no longer relevant.
+      previewCheckOut = null;
     }
     pickMode = (mode === 'out' && checkIn) ? 'out' : 'in';
     // Default to the CURRENT month whenever nothing is picked yet for this

@@ -153,6 +153,7 @@
   .pol .pl { font-family: ui-monospace, monospace; font-size: 15px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
   .pol .pv { font-family: var(--font-head); font-size: 22px; margin-bottom: 6px; }
   .pol p { font-size: 14px; color: var(--ink-soft); line-height: 1.55; margin: 0; }
+  .pol .cancel-policy { font-size: 14px; color: var(--ink-soft); line-height: 1.55; }
   .pol ul { font-size: 14px; color: var(--ink-soft); line-height: 1.5; margin: 9px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
   .pol li::marker { color: var(--accent); }
 
@@ -356,7 +357,12 @@
             <div class="pol box">
               <div class="pl">⟲ Cancellation</div>
               <div class="pv">Flexible · 30 days</div>
-              <p>If you cancel within 5 days of booking, your first month's rent, cleaning fee, and any pet fees will be refunded in full (or, if your card hasn't been charged yet, the hold on it is simply released). If you cancel more than 5 days after booking but more than 30 days before your check-in date, the cleaning fee and any pet fees are refunded in full, and 90% of your first month's rent is refunded (10% is kept). If you cancel 30 days or fewer before your check-in date, the first month's rent is non-refundable; however, the cleaning fee and any pet fees will be refunded. After check-in, the cleaning fee and any pet fees become non-refundable. If you terminate your stay early, one of the following applies: if you cancel more than 30 days before your original check-out date, a $2,550 early termination fee applies, reduced by a credit for any nights remaining in your current payment period that you've already paid for. If you cancel 30 days or fewer before your original check-out date and your last payment has already been made, no termination fee applies and that last payment is simply kept, not refunded. If you cancel 30 days or fewer before your original check-out date and your last payment has not yet been made, that last payment becomes due in full, with no additional termination fee.</p>
+              <div class="cancel-policy"><strong style="color:var(--ink);">Before check-in</strong>
+              <ul><li>Within 5 days of booking: 100% refund of your first month's rent, cleaning fee, and pet fees.</li><li>More than 5 days after booking &amp; more than 30 days before check-in: 90% refund of your first month's rent, plus a full refund of cleaning and pet fees.</li><li>30 days or fewer before check-in: first month's rent is non-refundable. Cleaning and pet fees will be refunded.</li></ul>
+              <strong style="color:var(--ink); display:block; margin-top:12px;">After check-in</strong>
+              <ul><li>Cleaning and pet fees are non-refundable.</li></ul>
+              <strong style="color:var(--ink); display:block; margin-top:12px;">Early departure</strong>
+              <ul><li>More than 30 days before your scheduled check-out: a $2,550 early termination fee applies, reduced by a credit for any unused prepaid nights in your current payment period.</li><li>30 days or fewer before your scheduled check-out: your final monthly payment is non-refundable. If it hasn't yet been paid, it remains due. No additional termination fee applies.</li></ul></div>
             </div>
             <div class="pol box alt">
               <div class="pl">🐾 Pet fee</div>

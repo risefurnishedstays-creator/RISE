@@ -417,15 +417,7 @@
     const unit = document.getElementById('unit').value;
     const guests = document.getElementById('guests').value;
     const pets = document.getElementById('pets').value;
-    const comment = document.getElementById('comment').value.trim();
-
-    // Fold the extra context (unit/guests/pets) into the message body,
-    // since the backend only expects name, email, phone, and message.
-    const message =
-      `Unit inquiring about: ${unit}\n` +
-      `Guests: ${guests}\n` +
-      `Pets: ${pets}\n\n` +
-      `${comment}`;
+    const message = document.getElementById('comment').value.trim();
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';
@@ -434,7 +426,7 @@
       const response = await fetch(`${API_BASE}/api/contact`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: fullName, email, phone, message }),
+        body: JSON.stringify({ name: fullName, email, phone, unit, guests, pets, message }),
       });
 
       const data = await response.json();
