@@ -157,6 +157,7 @@ async function handleCheckoutCompleted(session) {
       checkOut: meta.checkOut,
       nights: meta.nights,
       pets: meta.pets ? parseInt(meta.pets, 10) || 0 : 0,
+      guests: meta.guests ? parseInt(meta.guests, 10) || null : null,
       status: "pending-capture",
       paymentIntentId: session.payment_intent,
       stripeCustomerId: customerId,

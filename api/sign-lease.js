@@ -189,6 +189,7 @@ async function handleSign(req, res) {
         checkOut: booking.checkOut,
         confirmationCode: booking.confirmationCode,
         idUploadUrl,
+        govIdUploadedAt: booking.govIdUploadedAt,
       }),
     });
     leaseEmailSent = true;
