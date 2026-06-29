@@ -41,7 +41,7 @@ const Stripe = require("stripe");
 const { listAllConfirmedBookings, updateBookingStatus } = require("../../lib/bookings");
 const { key, addDays } = require("../../lib/pricing");
 const { sendEmail } = require("../../lib/sendEmail");
-const { checkinInstructionsEmail, leaseReminderEmail, idUploadReminderEmail, ownerLeaseOverdueAlertEmail, checkoutInstructionsEmail, unitCheckinPdfAttachment } = require("../../lib/emailTemplates");
+const { checkinInstructionsEmail, leaseReminderEmail, idUploadReminderEmail, ownerLeaseOverdueAlertEmail, ownerDoorCodeNeededEmail, checkoutInstructionsEmail, unitCheckinPdfAttachment } = require("../../lib/emailTemplates");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -155,12 +155,30 @@ module.exports = async function handler(req, res) {
             unitCode: booking.unitCode,
             checkIn: booking.checkIn,
             checkOut: booking.checkOut,
+            guests: booking.guests,
+            pets: booking.pets,
             confirmationCode: booking.confirmationCode,
             guidebookUrl: "https://www.risefurnishedstays.com/austin-guidebook.html",
           }),
         });
         await updateBookingStatus(booking.confirmationCode, { checkinEmailSent: true });
         results.checkinEmailsSent.push(booking.confirmationCode);
+
+        // Separate, independent notification to the owner -- the door
+        // code in the guest email above is a placeholder until the lock
+        // app is integrated, so you need your own heads-up to actually
+        // set a real code for this stay. Kept independent of the guest
+        // email's success/failure (and of itself failing) so neither one
+        // blocks or duplicates the other on a retry.
+        try {
+          await sendEmail({
+            to: "risefurnishedstays@gmail.com",
+            subject: `Door code needed: ${booking.confirmationCode} (check-in ${booking.checkIn})`,
+            html: ownerDoorCodeNeededEmail({ booking }),
+          });
+        } catch (e) {
+          console.error("owner door-code notification failed (non-fatal) for", booking.confirmationCode, e.message);
+        }
       } catch (e) {
         console.error("scheduled check-in email failed for", booking.confirmationCode, e.message);
         results.errors.push({ confirmationCode: booking.confirmationCode, step: "checkin", error: e.message });
