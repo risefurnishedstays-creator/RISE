@@ -57,7 +57,7 @@
      heading when scrolled to -- applies to any scroll trigger (anchor
      link, browser back/forward, or a plain element.scrollIntoView() call
      from JS), not just the :target pseudo-class case. */
-  :target, #book-stay, #units, #how-it-works, #faq { scroll-margin-top: 110px; }
+  :target, #book-stay, #units, #avail-section, #how-it-works, #faq { scroll-margin-top: 110px; }
   body {
     margin: 0; background: var(--paper); color: var(--ink);
     font-family: var(--font-body); font-weight: 400; font-size: 17px; line-height: 1.5;
@@ -380,7 +380,7 @@
       <a href="contact.html">Contact Us</a>
     </nav>
     <div class="nav-cta">
-      <a class="btn accent" href="#units">Book Direct</a>
+      <a class="btn accent" href="#avail-section">Book Direct</a>
       <button class="btn ghost burger" aria-label="menu">☰</button>
     </div>
   </div>
@@ -411,7 +411,7 @@
 
 <!-- AVAILABILITY SEARCH -->
 <div style="position:relative;z-index:1;padding:0 28px;"><div style="max-width:1120px;margin:32px auto 0;border-top:2px dashed color-mix(in oklab,var(--ink) 22%,transparent);"></div></div>
-<section class="avail-section">
+<section class="avail-section" id="avail-section">
   <div class="wrap">
     <div class="avail-head">
       <span class="eyebrow">Check availability</span>

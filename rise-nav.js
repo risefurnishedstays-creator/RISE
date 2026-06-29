@@ -208,12 +208,22 @@
     }
   });
 
-  /* Book Direct CTA from the desktop header */
+  /* Book Direct CTA from the desktop header -- reads the real href rather
+     than hardcoding one, so this never drifts out of sync with the
+     desktop button again (it previously pointed at a stale #book-stay
+     anchor after the desktop button was updated to target the
+     availability section instead). */
   var cta = document.querySelector('.nav-cta .btn.accent');
   if (cta) {
     var c = document.createElement('a');
     c.className = 'rmnav-cta';
-    c.href = 'index.html#book-stay';
+    var ctaHref = cta.getAttribute('href') || 'index.html#avail-section';
+    // index.html's own header links with a same-page "#avail-section"
+    // anchor (no filename) since it's already on that page -- but the
+    // mobile drawer can be opened from any page, so a same-page-only
+    // anchor needs the index.html prefix added back for it to work
+    // correctly from elsewhere too.
+    c.href = ctaHref.indexOf("#") === 0 ? "index.html" + ctaHref : ctaHref;
     c.textContent = cta.textContent.trim();
     panel.appendChild(c);
   }

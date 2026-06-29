@@ -109,41 +109,7 @@
   .sum-date .l { font-family: ui-monospace, monospace; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
   .sum-date .v { font-size: 14px; font-weight: 600; }
   .sum-arrow { color: var(--accent); font-size: 16px; }
-  .sum-dates { position: relative; }
-  button.sum-date { font: inherit; background: none; border: none; padding: 0; cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 2px; }
-  button.sum-date:hover .v { color: var(--accent); }
-  button.sum-date.active { outline: 2.5px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
-  .sum-edit-hint { font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); text-align: center; margin: -8px 0 16px; }
-  .cal-pop { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 70; background: var(--paper); border: 2.5px solid var(--line); border-radius: var(--radius-sketch); box-shadow: 5px 6px 0 var(--ink); padding: 14px; }
-  .cal-pop[hidden] { display: none; }
-  .cal-pop-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
-  .cal-pop-month { font-family: var(--font-head); font-size: 16px; }
-  .cal-pop-nav { display: flex; gap: 6px; }
-  .cal-pop-nav button { width: 30px; height: 30px; border: 2px solid var(--line); border-radius: 8px; background: var(--paper); cursor: pointer; font-size: 15px; line-height: 1; box-shadow: 1.5px 1.5px 0 var(--ink); }
-  .cal-pop-nav button:hover { background: var(--accent); color: #fff; }
-  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
-  .cal-dow { font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .02em; text-transform: uppercase; color: var(--ink-soft); text-align: center; padding-bottom: 4px; }
-  .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1.5px solid transparent; border-radius: 8px; }
-  .cal-day.in { border-color: color-mix(in oklab, var(--ink) 14%, transparent); }
-  .cal-day.past { color: color-mix(in oklab, var(--ink) 30%, transparent); }
-  .cal-day.booked { background: repeating-linear-gradient(45deg, var(--red-soft), var(--red-soft) 3px, transparent 3px, transparent 6px); border-color: var(--red); color: color-mix(in oklab,var(--ink) 50%, transparent); text-decoration: line-through; }
-  .cal-day.sel { cursor: pointer; }
-  .cal-day.sel:hover { border-color: var(--accent); background: var(--accent-soft); }
-  .cal-day.in-range, .cal-day.preview-range { background: var(--accent-soft); border-color: color-mix(in oklab,var(--accent) 30%, transparent); border-radius: 0; }
-  .cal-day.sel-start, .cal-day.sel-end, .cal-day.preview-end { background: var(--accent); color:#fff; border-color: var(--line); font-weight: 700; border-radius: 8px; }
-  .cal-day.turnover { background: linear-gradient(135deg, var(--paper) 0 46%, var(--line) 46% 54%, var(--red-soft) 54% 100%); border-color: color-mix(in oklab,var(--red) 55%, transparent); color: var(--ink); text-decoration: none; cursor: pointer; }
-  .cal-day.turnover.sel-end { background: var(--accent); color:#fff; }
-  .cal-pop-note { font-size: 12px; color: var(--red); font-weight: 600; margin: 10px 0 0; line-height: 1.4; }
-  .cal-legend { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 11px; font-size: 10.5px; color: var(--ink-soft); }
-  .cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
-  .cal-legend i { width: 12px; height: 12px; border: 1.5px solid var(--line); border-radius: 4px; flex: none; }
-  .cal-legend i.open { background: var(--paper); }
-  .cal-legend i.bk { background: repeating-linear-gradient(45deg, var(--red-soft), var(--red-soft) 2px, transparent 2px, transparent 4px); border-color: var(--red); }
-  .cal-legend i.turn { background: linear-gradient(135deg, var(--paper) 0 45%, var(--line) 45% 55%, var(--red-soft) 55% 100%); border-color: color-mix(in oklab,var(--red) 55%, transparent); }
-  .cal-pop-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 11px; padding-top: 10px; border-top: 2px dashed color-mix(in oklab,var(--ink) 16%, transparent); }
-  .cal-pop-foot button { background: none; border: none; cursor: pointer; font-family: var(--font-body); font-size: 13px; color: var(--ink); text-decoration: underline; padding: 4px 2px; }
-  .cal-pop-foot .cal-done { text-decoration: none; font-weight: 700; border: 2px solid var(--line); border-radius: 8px; padding: 6px 15px; box-shadow: 2px 2px 0 var(--ink); }
-  .cal-pop-foot .cal-done:hover { background: var(--accent); color: #fff; }
+  .sum-dates { position: relative; display: flex; align-items: center; gap: 14px; }
   .sum-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 14.5px; margin-bottom: 9px; }
   .sum-row .bk { color: var(--ink-soft); }
   .sum-row .bk small { display: block; font-size: 11px; }
@@ -183,7 +149,7 @@
     <nav class="links">
       <a href="index.html">Home</a>
       <div class="nav-dd">
-        <a href="index.html#book-stay">Units</a>
+        <a href="index.html#avail-section">Units</a>
         <div class="nav-dd-menu">
           <a href="unit-a.html">Cozy Home in South Austin</a>
           <a href="unit-b.html">Entire Home in South Austin</a>
@@ -194,7 +160,7 @@
       <a href="contact.html">Contact Us</a>
     </nav>
     <div class="nav-cta">
-      <a class="btn accent" href="index.html#book-stay">Book Direct</a>
+      <a class="btn accent" href="index.html#avail-section">Book Direct</a>
       <button class="btn ghost burger" aria-label="menu">☰</button>
     </div>
   </div>
@@ -287,12 +253,10 @@
         <h2>Your stay</h2>
         <div class="unit-line" id="sumUnit">—</div>
         <div class="sum-dates" id="sumDates">
-          <button type="button" class="sum-date" id="sumFldIn"><span class="l">Check-in</span><span class="v" id="sumIn">—</span></button>
+          <div class="sum-date"><span class="l">Check-in</span><span class="v" id="sumIn">—</span></div>
           <div class="sum-arrow">→</div>
-          <button type="button" class="sum-date" id="sumFldOut"><span class="l">Check-out</span><span class="v" id="sumOut">—</span></button>
-          <div class="cal-pop" id="calPop" hidden></div>
+          <div class="sum-date"><span class="l">Check-out</span><span class="v" id="sumOut">—</span></div>
         </div>
-        <div class="sum-edit-hint">✎ Tap a date to edit your stay</div>
         <div id="sumRows"></div>
         <hr class="sum-divider" />
         <div class="sum-row grand"><span>Total (USD)</span><span id="sumTotal">—</span></div>
@@ -363,7 +327,7 @@
   // ---- Render the summary using the SAME math as the unit page ----
   var money = CORE.money, fmtLong = CORE.fmtLong, NIGHTLY = CORE.NIGHTLY, PET_FEE = CORE.PET_FEE;
   var parseKey = CORE.parseKey, key = CORE.key, addDays = CORE.addDays;
-  var MONTHS = CORE.MONTHS, DOW = CORE.DOW, nightsBetween = CORE.nightsBetween, MIN_NIGHTS = CORE.MIN_NIGHTS;
+  var nightsBetween = CORE.nightsBetween;
   var petCount = parseInt(pets, 10) || 0;
   var p = CORE.priceParts(checkIn, checkOut, petCount);
 
@@ -410,149 +374,7 @@
     }).join('');
   }
 
-  /* ---------- editable calendar (availability-aware) ---------- */
-  var bookedRanges = [];
-  function rebuildRanges(arr) {
-    bookedRanges = (arr || []).map(function (b) {
-      var f = new Date(b.from + 'T00:00:00'), t = new Date(b.to + 'T00:00:00');
-      t = addDays(t, -1); // API 'to' is the exclusive checkout date
-      return { from: f, to: t };
-    });
-  }
-  var today = new Date(); today.setHours(0, 0, 0, 0);
-  function isBooked(d) { return bookedRanges.some(function (b) { return d >= b.from && d <= b.to; }); }
-  function isPast(d) { return d < today; }
-  function isAvail(d) { return !isBooked(d) && !isPast(d); }
-  function isTurnover(d) { return isBooked(d) && !isPast(d) && !isBooked(addDays(d, -1)); }
-  function rangeClear(a, b) { for (var d = new Date(a); d < b; d = addDays(d, 1)) { if (isBooked(d)) return false; } return true; }
-  function firstOpen() { var d = new Date(today); for (var i = 0; i < 800 && !isAvail(d); i++) d = addDays(d, 1); return d; }
-
-  var calOpen = false, calRef = null, pickMode = 'in', hoverDay = null, tmpIn = null, tmpOut = null, calMsg = '';
-
-  function setActive() {
-    var fi = gid('sumFldIn'), fo = gid('sumFldOut');
-    if (fi) fi.classList.toggle('active', calOpen && pickMode === 'in');
-    if (fo) fo.classList.toggle('active', calOpen && pickMode === 'out');
-  }
-  function dayCls(date) {
-    var cls = 'cal-day in';
-    var turn = isTurnover(date);
-    if (isBooked(date) && !turn) cls += ' booked';
-    else if (isPast(date)) cls += ' past';
-    else if (turn) cls += ' booked turnover sel';
-    else cls += ' sel';
-    if (tmpIn && key(date) === key(tmpIn)) cls += ' sel-start';
-    else if (tmpOut && key(date) === key(tmpOut)) cls += ' sel-end';
-    else if (tmpIn && tmpOut && date > tmpIn && date < tmpOut) cls += ' in-range';
-    return cls;
-  }
-  function renderCalPop() {
-    var pop = gid('calPop'); if (!pop) return;
-    var y = calRef.getFullYear(), m = calRef.getMonth();
-    var first = new Date(y, m, 1).getDay();
-    var days = new Date(y, m + 1, 0).getDate();
-    var grid = DOW.map(function (d) { return '<div class="cal-dow">' + d + '</div>'; }).join('');
-    for (var i = 0; i < first; i++) grid += '<div class="cal-day"></div>';
-    for (var dd = 1; dd <= days; dd++) { var date = new Date(y, m, dd); grid += '<div class="' + dayCls(date) + '" data-date="' + key(date) + '">' + dd + '</div>'; }
-    pop.innerHTML =
-      '<div class="cal-pop-top"><div class="cal-pop-month">' + MONTHS[m] + ' ' + y + '</div>' +
-        '<div class="cal-pop-nav"><button type="button" data-nav="prev" aria-label="previous month">\u2039</button><button type="button" data-nav="next" aria-label="next month">\u203a</button></div></div>' +
-      '<div class="cal-grid">' + grid + '</div>' +
-      (calMsg ? '<div class="cal-pop-note">' + calMsg + '</div>' : '') +
-      '<div class="cal-legend"><span><i class="open"></i> Available</span><span><i class="bk"></i> Booked</span><span><i class="turn"></i> Checkout only</span></div>' +
-      '<div class="cal-pop-foot"><button type="button" data-act="clear">Clear</button><button type="button" class="cal-done" data-act="done">Done</button></div>';
-    applyHover();
-  }
-  function applyHover() {
-    var pop = gid('calPop'); if (!pop) return;
-    var active = tmpIn && !tmpOut && hoverDay && hoverDay > tmpIn && rangeClear(tmpIn, hoverDay);
-    pop.querySelectorAll('.cal-day[data-date]').forEach(function (cell) {
-      cell.classList.remove('preview-range', 'preview-end');
-      if (!active) return;
-      var date = parseKey(cell.dataset.date);
-      if (date > tmpIn && date < hoverDay) cell.classList.add('preview-range');
-      else if (key(date) === key(hoverDay)) cell.classList.add('preview-end');
-    });
-  }
-  function pickDay(s) {
-    var d = parseKey(s);
-    if (isTurnover(d)) {
-      if (tmpIn && !tmpOut && d > tmpIn && rangeClear(tmpIn, d)) { tmpOut = d; }
-      else { return; }
-    } else {
-      if (!isAvail(d)) return;
-      if (!tmpIn || tmpOut) { tmpIn = d; tmpOut = null; pickMode = 'out'; calMsg = ''; }
-      else if (d <= tmpIn) { tmpIn = d; tmpOut = null; pickMode = 'out'; calMsg = ''; }
-      else if (!rangeClear(tmpIn, d)) { tmpIn = d; tmpOut = null; pickMode = 'out'; calMsg = ''; }
-      else { tmpOut = d; }
-    }
-    hoverDay = null;
-    if (tmpIn && tmpOut) {
-      var nn = nightsBetween(tmpIn, tmpOut);
-      if (nn >= MIN_NIGHTS) { commit(); return; }
-      calMsg = 'Minimum stay is ' + MIN_NIGHTS + ' nights \u2014 you have ' + nn + '. Pick a later checkout.';
-      renderCalPop(); return;
-    }
-    renderCalPop(); setActive();
-  }
-  function commit() {
-    checkIn = tmpIn; checkOut = tmpOut; calMsg = '';
-    closeCal(); renderSummary();
-  }
-  function handlePopClick(e) {
-    var nav = e.target.closest('[data-nav]');
-    if (nav) { calRef.setMonth(calRef.getMonth() + (nav.dataset.nav === 'prev' ? -1 : 1)); renderCalPop(); return; }
-    var act = e.target.closest('[data-act]');
-    if (act) { if (act.dataset.act === 'clear') { tmpIn = null; tmpOut = null; calMsg = ''; pickMode = 'in'; renderCalPop(); setActive(); } else { closeCal(); } return; }
-    var cell = e.target.closest('.cal-day.sel');
-    if (cell && cell.dataset.date) pickDay(cell.dataset.date);
-  }
-  function openCal(mode) {
-    // When reopening specifically to adjust the CHECKOUT date (mode === 'out'),
-    // keep tmpIn as the already-committed check-in date but clear tmpOut to
-    // null. This matters because pickDay()'s branch logic (`!tmpIn || tmpOut`)
-    // treats a non-null tmpOut as "a full range is already selected, so a
-    // new click should start a brand new range" -- which is exactly wrong
-    // when the guest just wants to pick a different checkout date without
-    // re-picking check-in. Re-copying the committed checkOut into tmpOut
-    // here was the bug: it made every checkout-field click look like a
-    // freshly-committed range, so the very next click reset check-in instead
-    // of updating checkout.
-    if (mode === 'out' && checkIn) {
-      tmpIn = checkIn; tmpOut = null;
-    } else {
-      tmpIn = checkIn; tmpOut = checkOut;
-    }
-    calMsg = '';
-    pickMode = (mode === 'out' && tmpIn) ? 'out' : 'in';
-    // Default to the CURRENT month whenever nothing is picked yet -- regardless
-    // of whether today (or this month) happens to be booked out. Only fall
-    // back to the already-picked check-in date once something is selected.
-    var base = (pickMode === 'out' && tmpIn) ? tmpIn : (tmpIn || today);
-    calRef = new Date(base.getFullYear(), base.getMonth(), 1);
-    calOpen = true;
-    var pop = gid('calPop'); if (!pop) return;
-    pop.hidden = false;
-    pop.onclick = function (e) { e.stopPropagation(); handlePopClick(e); };
-    pop.onmouseover = function (e) { var c = e.target.closest('.cal-day.sel'); if (c && c.dataset.date && tmpIn && !tmpOut) { var d = parseKey(c.dataset.date); if (!hoverDay || key(d) !== key(hoverDay)) { hoverDay = d; applyHover(); } } };
-    pop.onmouseleave = function () { if (hoverDay) { hoverDay = null; applyHover(); } };
-    renderCalPop(); setActive();
-  }
-  function closeCal() { calOpen = false; var pop = gid('calPop'); if (pop) pop.hidden = true; setActive(); }
-  function toggleCal(mode) { if (calOpen && pickMode === mode) closeCal(); else openCal(mode); }
-
-  gid('sumFldIn').onclick = function (e) { e.stopPropagation(); toggleCal('in'); };
-  gid('sumFldOut').onclick = function (e) { e.stopPropagation(); toggleCal('out'); };
-  document.addEventListener('click', function (e) { var dd = gid('sumDates'); if (calOpen && dd && !dd.contains(e.target)) closeCal(); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && calOpen) closeCal(); });
-
   renderSummary();
-
-  // Live availability so the editable calendar matches the Airbnb-synced unit pages
-  fetch(API_BASE + '/api/availability?unit=' + encodeURIComponent(unitCode))
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (data) { if (!data || !data.booked) return; rebuildRanges(data.booked); if (calOpen) renderCalPop(); })
-    .catch(function () {});
 
   // ---- Payment ----
   var payBtn = document.getElementById('payBtn');
@@ -648,7 +470,7 @@
       <div class="foot-col">
         <h4>Explore</h4>
         <a href="index.html">Home</a>
-        <a href="index.html#book-stay">Units</a>
+        <a href="index.html#avail-section">Units</a>
         <a href="austin-guidebook.html">Austin Guidebook</a>
         <a href="index.html#faq">FAQ</a>
       </div>

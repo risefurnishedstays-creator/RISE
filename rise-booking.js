@@ -262,6 +262,12 @@
   abPop.addEventListener('mouseleave', function () { if (hoverDay) { hoverDay = null; applyHover(); } });
 
   function openCal(mode) {
+    // Capture the existing checkout date BEFORE it gets cleared just
+    // below, so the calendar can still default to ITS month -- without
+    // this, by the time `base` is computed there'd be no way to tell
+    // what checkout used to be, since it's already null at that point.
+    var previousCheckOut = checkOut;
+
     // When reopening specifically to change the CHECKOUT date (mode === 'out')
     // on an already-committed stay, clear checkOut to null first. Without
     // this, pickDay()'s "!checkIn || checkOut" branch sees the existing
@@ -275,9 +281,15 @@
     pickMode = (mode === 'out' && checkIn) ? 'out' : 'in';
     // Default to the CURRENT month whenever nothing is picked yet for this
     // field -- regardless of whether today (or this month) happens to be
-    // booked out. Only fall back to the already-picked date (checkIn, when
-    // reopening to adjust checkout) once something has actually been selected.
-    var base = (pickMode === 'out' && checkIn) ? checkIn : (checkIn || today);
+    // booked out. When reopening to adjust an existing checkout date,
+    // default to THAT checkout date's month (not check-in's) -- the guest
+    // is looking at their already-chosen checkout date and expects to see
+    // it, not get yanked back to the start of their stay. Only fall back
+    // to checkIn's month when there's no previous checkout to show
+    // (picking checkout for the first time on a fresh check-in).
+    var base = (pickMode === 'out' && previousCheckOut) ? previousCheckOut
+      : (pickMode === 'out' && checkIn) ? checkIn
+      : (checkIn || today);
     calRef = new Date(base.getFullYear(), base.getMonth(), 1);
     closeBreakdown();
     abPop.hidden = false;
