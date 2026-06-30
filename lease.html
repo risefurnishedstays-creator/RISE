@@ -40,8 +40,9 @@
   .btn.small { padding: 8px 14px; font-size: 14px; box-shadow: 2px 2px 0 var(--ink); }
 
   header.nav { padding: 22px 0; border-bottom: 2.5px solid var(--line); background: var(--paper); }
-  header.nav .wrap { display: flex; align-items: center; }
-  .logo-img { height: 48px; width: auto; display: block; }
+  header.nav .nav-inner { display: flex; align-items: center; height: 72px; }
+  .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .logo-img { height: 60px; width: auto; display: block; }
 
   main { flex: 1 0 auto; padding: 44px 0 80px; }
 
@@ -96,26 +97,10 @@
 <body>
 
 <header class="nav">
-  <div class="wrap">
-    <a href="index.html"><img class="logo-img" src="assets/rise-logo.png" alt="RISE Furnished Stays" /></a>
+  <div class="wrap nav-inner">
+    <a class="logo" href="index.html"><img class="logo-img" src="assets/rise-logo.png" alt="RISE Furnished Stays" /></a>
   </div>
 </header>
-
-<nav class="rise-stepstrip" aria-label="Booking progress">
-  <div class="rise-stepstrip-inner">
-    <span class="rise-step done" style="transform: rotate(-2deg);"><span class="num">&#10003;</span>Select Dates &amp; Unit</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step done" style="transform: rotate(1.5deg);"><span class="num">&#10003;</span>Book &amp; Pay</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step current" style="transform: rotate(-1.5deg);"><span class="num">3</span>Sign Lease</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step" style="transform: rotate(2deg);"><span class="num">4</span>Upload ID</span><span class="rise-step-sep">&gt;</span>
-    <span class="rise-step" style="transform: rotate(-2deg);"><span class="num">5</span>Confirmation</span>
-  </div>
-</nav>
-<script>
-  (function () {
-    var current = document.querySelector('.rise-stepstrip .rise-step.current');
-    if (current) current.scrollIntoView({ block: 'nearest', inline: 'center' });
-  })();
-</script>
 
 <main>
   <div class="wrap">
@@ -443,5 +428,6 @@
   fetchBooking();
 })();
 </script>
+<script src="rise-nav.js"></script>
 </body>
 </html>
