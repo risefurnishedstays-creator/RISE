@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Booking Report — RISE Admin</title>
+<style>
+  :root {
+    --ink: #1c2024;
+    --muted: #5c6470;
+    --line: #dfe3e8;
+    --bg: #f7f8fa;
+    --card: #ffffff;
+    --danger: #b3261e;
+    --danger-bg: #fdecea;
+    --ok: #1e6b3c;
+    --ok-bg: #eaf6ee;
+    --warn: #8a5a00;
+    --warn-bg: #fff4e0;
+    --accent: #2c3e50;
+    --focus: #2563eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 32px 16px 80px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .wrap.wide { max-width: 1400px; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 0.9rem; margin: 0 0 28px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  input, select {
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px;
+    font-size: 0.95rem; font-family: inherit; background: white; color: var(--ink);
+  }
+  input:focus, select:focus { outline: 2px solid var(--focus); outline-offset: 1px; }
+  button { font-size: 0.95rem; font-weight: 600; padding: 10px 18px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-secondary { background: white; border-color: var(--line); color: var(--ink); }
+  .banner { border-radius: 8px; padding: 12px 14px; font-size: 0.9rem; margin-bottom: 14px; }
+  .banner.ok { background: var(--ok-bg); color: var(--ok); }
+  .banner.warn { background: var(--warn-bg); color: var(--warn); }
+  .banner.danger { background: var(--danger-bg); color: var(--danger); }
+  .hidden { display: none; }
+  .muted { color: var(--muted); font-size: 0.85rem; }
+
+  /* ---- Filter bar ---- */
+  .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; align-items: end; margin-bottom: 4px; }
+  .filter-field { display: flex; flex-direction: column; }
+  .filter-field input, .filter-field select { width: 100%; }
+  .filter-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+  /* ---- Summary strip ---- */
+  .summary-strip { display: flex; flex-wrap: wrap; gap: 22px; margin: 4px 0 0; }
+  .summary-stat { min-width: 110px; }
+  .summary-stat .num { font-size: 1.3rem; font-weight: 700; }
+  .summary-stat .lbl { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+  /* ---- Table ---- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: white; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; white-space: nowrap; }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid #f0f1f3; }
+  th { background: #fafbfc; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); cursor: pointer; user-select: none; position: sticky; top: 0; }
+  th:hover { color: var(--ink); }
+  th .arrow { font-size: 0.7em; opacity: 0.5; margin-left: 3px; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:hover td { background: #fafbfc; }
+  .status-pill { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .status-pill.confirmed { background: var(--ok-bg); color: var(--ok); }
+  .status-pill.pending-capture { background: var(--warn-bg); color: var(--warn); }
+  .status-pill.cancelled, .status-pill.cancelled-midstay { background: var(--danger-bg); color: var(--danger); }
+  .pay-pill { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; background: #eef1f4; color: var(--muted); }
+  .pay-pill.paid { background: var(--ok-bg); color: var(--ok); }
+  .pay-pill.held { background: var(--warn-bg); color: var(--warn); }
+  .pay-pill.refunded, .pay-pill.released { background: #eef1f4; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="wrap gate" id="gateScreen">
+  <div class="card">
+    <h1>Admin access</h1>
+    <p class="sub">Enter the admin key.</p>
+    <label for="secretInput">Admin key</label>
+    <input id="secretInput" type="password" autocomplete="off" style="width:100%; margin-bottom:14px;" placeholder="••••••••">
+    <button class="btn-primary" id="unlockBtn" style="width:100%;">Unlock</button>
+    <p class="muted" id="gateError" style="color:var(--danger); display:none;">Incorrect key.</p>
+  </div>
+</div>
+
+<div class="wrap wide hidden" id="mainScreen">
+  <h1>Booking Report</h1>
+  <p class="sub">All bookings made through the direct booking website (risefurnishedstays.com). For your use only.</p>
+
+  <div class="card">
+    <div class="filter-grid">
+      <div class="filter-field">
+        <label for="fUnit">Unit</label>
+        <select id="fUnit">
+          <option value="">All units</option>
+          <option value="A">Unit A</option>
+          <option value="B">Unit B</option>
+          <option value="D">Unit D</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="fStatus">Booking status</label>
+        <select id="fStatus">
+          <option value="">All</option>
+          <option value="active">Active (not cancelled)</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="pending-capture">Pending capture</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="cancelled-midstay">Cancelled (mid-stay)</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="fDateField">Filter dates by</label>
+        <select id="fDateField">
+          <option value="createdAt">Booking date</option>
+          <option value="checkIn">Check-in date</option>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="fFrom">From</label>
+        <input id="fFrom" type="date">
+      </div>
+      <div class="filter-field">
+        <label for="fTo">To</label>
+        <input id="fTo" type="date">
+      </div>
+    </div>
+    <div class="filter-actions">
+      <button class="btn-primary" id="loadBtn">Generate report</button>
+      <button class="btn-secondary" id="resetBtn">Reset filters</button>
+      <button class="btn-secondary" id="csvBtn" disabled>Download CSV</button>
+    </div>
+  </div>
+
+  <div id="summaryCard" class="card hidden"></div>
+  <div id="reportArea"></div>
+</div>
+
+<script>
+  const secretKey = "rise_admin_secret";
+  let adminSecret = sessionStorage.getItem(secretKey) || "";
+  const API_BASE = "https://rise-eta-three.vercel.app"; // CHANGE THIS if your Vercel URL ever changes
+
+  const gateScreen = document.getElementById("gateScreen");
+  const mainScreen = document.getElementById("mainScreen");
+  const gateError = document.getElementById("gateError");
+
+  function showMain() {
+    gateScreen.classList.add("hidden");
+    mainScreen.classList.remove("hidden");
+  }
+
+  async function verifyKey(key) {
+    try {
+      const res = await fetch(API_BASE + "/api/admin-bookings", { headers: { "x-admin-secret": key } });
+      return res.status !== 401;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  (async () => {
+    if (adminSecret && (await verifyKey(adminSecret))) showMain();
+  })();
+
+  document.getElementById("unlockBtn").addEventListener("click", async () => {
+    const val = document.getElementById("secretInput").value.trim();
+    if (!val) return;
+    const ok = await verifyKey(val);
+    if (ok) {
+      adminSecret = val;
+      sessionStorage.setItem(secretKey, val);
+      showMain();
+    } else {
+      gateError.style.display = "block";
+    }
+  });
+
+  // ---- Pricing constants, mirrored from lib/pricing.js's CONFIG ----
+  // Recomputes the rent / cleaning / pet fee breakdown from checkIn,
+  // checkOut, and pets -- the same three fields every booking already has
+  // stored -- rather than requiring new fields on the booking record or a
+  // backfill of old bookings. This mirrors lib/pricing.js's priceParts()
+  // exactly; if NIGHTLY/CLEANING/PET_FEE ever change there, update them
+  // here too so this report's numbers don't silently drift out of sync.
+  const NIGHTLY = 85;
+  const CLEANING = 150;
+  const PET_FEE = 50;
+
+  function nightsBetween(checkInStr, checkOutStr) {
+    const a = new Date(checkInStr + "T00:00:00");
+    const b = new Date(checkOutStr + "T00:00:00");
+    return Math.round((b - a) / 86400000);
+  }
+
+  function priceBreakdown(booking) {
+    const nights = booking.nights || (booking.checkIn && booking.checkOut ? nightsBetween(booking.checkIn, booking.checkOut) : 0);
+    const pets = booking.pets || 0;
+    const petFee = pets * PET_FEE;
+    const rent = nights * NIGHTLY;
+    const totalAmount = rent + CLEANING + petFee;
+    return { rent, cleaning: CLEANING, petFee, totalAmount };
+  }
+
+  // ---- Payment status, derived from booking.status + cancellation fields ----
+  // Distinct from "booking status" (the raw lifecycle field) -- this answers
+  // "where does the guest's money actually stand," which isn't always the
+  // same question. E.g. a cancelled-midstay booking might still have a real
+  // charge outstanding (Rule 3) or a kept payment (Rule 2), not just "cancelled."
+  function paymentStatus(b) {
+    if (b.status === "cancelled" || b.status === "cancelled-midstay") {
+      if (b.refundId) return { label: "Refunded", cls: "refunded" };
+      if (b.canceledPaymentIntentId) return { label: "Released (never charged)", cls: "released" };
+      if (b.terminationFee || b.finalPaymentDue) return { label: "Cancelled, fee billed", cls: "held" };
+      return { label: "Cancelled", cls: "released" };
+    }
+    if (b.status === "pending-capture") return { label: "Held (not charged)", cls: "held" };
+    if (b.status === "confirmed") return { label: "Paid", cls: "paid" };
+    return { label: b.status || "Unknown", cls: "" };
+  }
+
+  function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.textContent = str == null ? "" : String(str);
+    return d.innerHTML;
+  }
+
+  function money(n) {
+    if (n == null || isNaN(n)) return "—";
+    return "$" + Number(n).toLocaleString("en-US");
+  }
+
+  // ---- Filtering ----
+  document.getElementById("resetBtn").addEventListener("click", () => {
+    document.getElementById("fUnit").value = "";
+    document.getElementById("fStatus").value = "";
+    document.getElementById("fDateField").value = "createdAt";
+    document.getElementById("fFrom").value = "";
+    document.getElementById("fTo").value = "";
+  });
+
+  let currentRows = [];
+
+  document.getElementById("loadBtn").addEventListener("click", async () => {
+    const reportArea = document.getElementById("reportArea");
+    const summaryCard = document.getElementById("summaryCard");
+    const csvBtn = document.getElementById("csvBtn");
+    reportArea.innerHTML = '<p class="muted">Loading…</p>';
+    summaryCard.classList.add("hidden");
+    csvBtn.disabled = true;
+
+    const unitFilter = document.getElementById("fUnit").value;
+
+    try {
+      const res = await fetch(API_BASE + "/api/admin-bookings" + (unitFilter ? "?unit=" + unitFilter : ""), {
+        headers: { "x-admin-secret": adminSecret },
+      });
+      if (res.status === 401) {
+        sessionStorage.removeItem(secretKey);
+        location.reload();
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) {
+        reportArea.innerHTML = '<div class="banner danger">' + (data.error || "Failed to load bookings.") + '</div>';
+        return;
+      }
+
+      let rows = data.bookings || [];
+
+      // ---- Status filter ----
+      const statusFilter = document.getElementById("fStatus").value;
+      if (statusFilter === "active") {
+        rows = rows.filter((b) => b.status !== "cancelled" && b.status !== "cancelled-midstay");
+      } else if (statusFilter) {
+        rows = rows.filter((b) => b.status === statusFilter);
+      }
+
+      // ---- Date range filter ----
+      const dateField = document.getElementById("fDateField").value;
+      const fromVal = document.getElementById("fFrom").value;
+      const toVal = document.getElementById("fTo").value;
+      if (fromVal || toVal) {
+        rows = rows.filter((b) => {
+          const raw = b[dateField];
+          if (!raw) return false;
+          const d = raw.slice(0, 10); // works for both "YYYY-MM-DD" and full ISO timestamps
+          if (fromVal && d < fromVal) return false;
+          if (toVal && d > toVal) return false;
+          return true;
+        });
+      }
+
+      currentRows = rows;
+      renderReport(rows);
+      csvBtn.disabled = rows.length === 0;
+    } catch (e) {
+      reportArea.innerHTML = '<div class="banner danger">Network error: ' + e.message + '</div>';
+    }
+  });
+
+  let sortField = "createdAt";
+  let sortDir = "desc";
+
+  const COLUMNS = [
+    { key: "guestName", label: "Guest", type: "string" },
+    { key: "confirmationCode", label: "Confirmation #", type: "string" },
+    { key: "unitCode", label: "Unit", type: "string" },
+    { key: "checkIn", label: "Check-in", type: "string" },
+    { key: "checkOut", label: "Check-out", type: "string" },
+    { key: "guests", label: "Guests", type: "number" },
+    { key: "pets", label: "Pets", type: "number" },
+    { key: "rent", label: "Total rent", type: "number" },
+    { key: "cleaning", label: "Cleaning fee", type: "number" },
+    { key: "petFee", label: "Pet fee", type: "number" },
+    { key: "totalAmount", label: "Total amount", type: "number" },
+    { key: "paymentStatusLabel", label: "Payment status", type: "string" },
+    { key: "status", label: "Booking status", type: "string" },
+    { key: "createdAt", label: "Booking made", type: "string" },
+  ];
+
+  function buildReportRows(bookings) {
+    return bookings.map((b) => {
+      const breakdown = priceBreakdown(b);
+      const pay = paymentStatus(b);
+      return {
+        guestName: b.guestName || "",
+        confirmationCode: b.confirmationCode || "",
+        unitCode: b.unitCode || "",
+        checkIn: b.checkIn || "",
+        checkOut: b.checkOut || "",
+        guests: b.guests == null ? "" : b.guests,
+        pets: b.pets || 0,
+        rent: breakdown.rent,
+        cleaning: breakdown.cleaning,
+        petFee: breakdown.petFee,
+        totalAmount: breakdown.totalAmount,
+        paymentStatusLabel: pay.label,
+        paymentStatusCls: pay.cls,
+        status: b.status || "",
+        createdAt: b.createdAt || "",
+      };
+    });
+  }
+
+  function sortRows(rows) {
+    const col = COLUMNS.find((c) => c.key === sortField);
+    const sorted = rows.slice().sort((a, b) => {
+      let av = a[sortField], bv = b[sortField];
+      if (col && col.type === "number") {
+        av = Number(av) || 0; bv = Number(bv) || 0;
+        return sortDir === "asc" ? av - bv : bv - av;
+      }
+      av = (av || "").toString(); bv = (bv || "").toString();
+      return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+    return sorted;
+  }
+
+  function renderReport(bookings) {
+    const reportArea = document.getElementById("reportArea");
+    const summaryCard = document.getElementById("summaryCard");
+
+    if (!bookings.length) {
+      reportArea.innerHTML = '<div class="banner warn">No bookings match these filters.</div>';
+      summaryCard.classList.add("hidden");
+      return;
+    }
+
+    const allRows = buildReportRows(bookings);
+    window.__reportRows = allRows; // stashed for CSV export and re-sorts without refetching
+
+    renderSummary(allRows);
+    renderTable();
+  }
+
+  function renderSummary(rows) {
+    const summaryCard = document.getElementById("summaryCard");
+    const activeRows = rows.filter((r) => r.status !== "cancelled" && r.status !== "cancelled-midstay");
+    const totalRevenue = activeRows.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+    const totalPets = rows.filter((r) => r.pets > 0).length;
+
+    summaryCard.classList.remove("hidden");
+    summaryCard.innerHTML =
+      '<div class="summary-strip">' +
+        '<div class="summary-stat"><div class="num">' + rows.length + '</div><div class="lbl">Bookings shown</div></div>' +
+        '<div class="summary-stat"><div class="num">' + activeRows.length + '</div><div class="lbl">Active (not cancelled)</div></div>' +
+        '<div class="summary-stat"><div class="num">' + money(totalRevenue) + '</div><div class="lbl">Total value (active only)</div></div>' +
+        '<div class="summary-stat"><div class="num">' + totalPets + '</div><div class="lbl">With pets</div></div>' +
+      '</div>';
+  }
+
+  function renderTable() {
+    const reportArea = document.getElementById("reportArea");
+    const rows = sortRows(window.__reportRows || []);
+
+    const headHtml = COLUMNS.map((c) => {
+      const arrow = sortField === c.key ? (sortDir === "asc" ? "&uarr;" : "&darr;") : "";
+      return '<th data-key="' + c.key + '">' + escapeHtml(c.label) + (arrow ? ' <span class="arrow">' + arrow + '</span>' : '') + '</th>';
+    }).join("");
+
+    const bodyHtml = rows.map((r) => {
+      return '<tr>' +
+        '<td>' + escapeHtml(r.guestName) + '</td>' +
+        '<td>' + escapeHtml(r.confirmationCode) + '</td>' +
+        '<td>' + escapeHtml(r.unitCode) + '</td>' +
+        '<td>' + escapeHtml(r.checkIn) + '</td>' +
+        '<td>' + escapeHtml(r.checkOut) + '</td>' +
+        '<td class="num">' + escapeHtml(r.guests) + '</td>' +
+        '<td class="num">' + escapeHtml(r.pets) + '</td>' +
+        '<td class="num">' + money(r.rent) + '</td>' +
+        '<td class="num">' + money(r.cleaning) + '</td>' +
+        '<td class="num">' + money(r.petFee) + '</td>' +
+        '<td class="num">' + money(r.totalAmount) + '</td>' +
+        '<td><span class="pay-pill ' + r.paymentStatusCls + '">' + escapeHtml(r.paymentStatusLabel) + '</span></td>' +
+        '<td><span class="status-pill ' + r.status + '">' + escapeHtml(r.status) + '</span></td>' +
+        '<td>' + escapeHtml((r.createdAt || "").slice(0, 10)) + '</td>' +
+      '</tr>';
+    }).join("");
+
+    reportArea.innerHTML = '<div class="table-wrap"><table><thead><tr>' + headHtml + '</tr></thead><tbody>' + bodyHtml + '</tbody></table></div>';
+
+    reportArea.querySelectorAll("th[data-key]").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.key;
+        if (sortField === key) {
+          sortDir = sortDir === "asc" ? "desc" : "asc";
+        } else {
+          sortField = key;
+          sortDir = "asc";
+        }
+        renderTable();
+      });
+    });
+  }
+
+  // ---- CSV export ----
+  function toCsvValue(v) {
+    const s = v == null ? "" : String(v);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  document.getElementById("csvBtn").addEventListener("click", () => {
+    const rows = sortRows(window.__reportRows || []);
+    if (!rows.length) return;
+
+    const headers = ["Guest", "Confirmation #", "Unit", "Check-in", "Check-out", "Guests", "Pets", "Total rent", "Cleaning fee", "Pet fee", "Total amount", "Payment status", "Booking status", "Booking made"];
+    const lines = [headers.map(toCsvValue).join(",")];
+    rows.forEach((r) => {
+      lines.push([
+        r.guestName, r.confirmationCode, r.unitCode, r.checkIn, r.checkOut, r.guests, r.pets,
+        r.rent, r.cleaning, r.petFee, r.totalAmount, r.paymentStatusLabel, r.status, (r.createdAt || "").slice(0, 10),
+      ].map(toCsvValue).join(","));
+    });
+
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const today = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = "rise-booking-report-" + today + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+</script>
+</body>
+</html>
